@@ -4,95 +4,120 @@
   <meta charset="UTF-8" />
   <title>生命生物体</title>
   <style>
-    body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
-    canvas { image-rendering: pixelated; box-shadow: 0 0 10px #0f0; }
+    /* 全屏黑底，画布居中 */
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    canvas {
+      image-rendering: pixelated;
+      box-shadow: 0 0 10px #0f0;
+    }
   </style>
 </head>
 <body>
   <canvas id="life"></canvas>
   <script>
-  // —— 配置区 —— 
-  const CELL = 4;      // 每个元胞像素大小
-  const COLS = 200, ROWS = 150;
-  const INTERVAL_MS = 80;
+    // —— 配置区 —— 
+    const CELL        = 4;       // 每个元胞像素大小
+    const COLS        = 200;     // 网格宽度
+    const ROWS        = 150;     // 网格高度
+    const INTERVAL_MS = 80;      // 演化间隔（毫秒）
 
-  // —— 加载轮廓图 —— 
-  const img = new Image();
-  img.src = 'creature.png'; // 黑白 PNG，黑色为形状
-  img.onload = () => init();
+    // —— 滑翔机模式（当“眼睛”）—— 
+    const GLIDER = [
+      [1,0],[2,1],[0,2],[1,2],[2,2]
+    ];
 
-  // —— 创建网格 —— 
-  let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-  let buffer = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    // —— 全局网格缓冲区 —— 
+    let grid   = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    let buffer = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 
-  // —— 飞船模式（放在“眼睛”）—— 
-  const GLIDER = [[1,0],[2,1],[0,2],[1,2],[2,2]];
+    // —— 加载轮廓图 —— 
+    const img = new Image();
+    img.src    = 'creature.png';  // 请确保和 index.html 在同一目录
+    img.onload = init;
 
-  // —— 入口初始化 —— 
-  function init() {
-    const canvas = document.getElementById('life');
-    canvas.width = COLS * CELL;
-    canvas.height= ROWS * CELL;
-    const ctx = canvas.getContext('2d');
+    // —— 初始化：提取轮廓 + 加眼睛 + 启动循环 —— 
+    function init() {
+      // 1) 创建临时画布，缩放图像到 网格 大小
+      const tmp = document.createElement('canvas');
+      tmp.width  = COLS;
+      tmp.height = ROWS;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(img, 0, 0, COLS, ROWS);
 
-    // 1) 从图像提取轮廓
-    const tmp = document.createElement('canvas');
-    tmp.width = COLS; tmp.height = ROWS;
-    const tctx = tmp.getContext('2d');
-    tctx.drawImage(img, 0, 0, COLS, ROWS);
-    const pixels = tctx.getImageData(0,0,COLS,ROWS).data;
-    for (let y=0;y<ROWS;y++){
-      for (let x=0;x<COLS;x++){
-        const i = (y*COLS + x)*4;
-        const v = pixels[i] < 128 ? 1 : 0; 
-        grid[y][x] = v;
+      // 2) 用 alpha 通道提取轮廓：只要像素不透明，就视为“活细胞”
+      const data = tctx.getImageData(0, 0, COLS, ROWS).data;
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          const idx = (y * COLS + x) * 4 + 3; // alpha 通道偏移
+          grid[y][x] = data[idx] > 0 ? 1 : 0;
+        }
       }
+
+      // 3) 在“头部”位置叠滑翔机当“眼睛”
+      const eyeY = Math.floor(ROWS / 3);
+      const eyeX = Math.floor(COLS / 3);
+      GLIDER.forEach(([dx, dy]) => grid[eyeY + dy][eyeX + dx] = 1);
+      GLIDER.forEach(([dx, dy]) => grid[eyeY + dy][COLS - eyeX - dx] = 1);
+
+      // 4) 设置并启动主循环
+      const canvas = document.getElementById('life');
+      canvas.width  = COLS * CELL;
+      canvas.height = ROWS * CELL;
+      const ctx = canvas.getContext('2d');
+
+      // 先绘制一次，然后定时演化 & 重绘
+      draw(ctx);
+      setInterval(() => {
+        step();
+        draw(ctx);
+      }, INTERVAL_MS);
     }
 
-    // 2) 在轮廓“眼睛”位置叠加两个滑翔机
-    const eyeY = Math.floor(ROWS/3), eyeX = Math.floor(COLS/3);
-    GLIDER.forEach(([dx,dy]) => grid[eyeY+dy][eyeX+dx]=1);
-    GLIDER.forEach(([dx,dy]) => grid[eyeY+dy][COLS-eyeX-dx]=1);
+    // —— 演化一步 —— 
+    function step() {
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          let n = 0;
+          // 8 邻域计数
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx || dy) {
+                const yy = (y + dy + ROWS) % ROWS;
+                const xx = (x + dx + COLS) % COLS;
+                n += grid[yy][xx];
+              }
+            }
+          }
+          // 生命游戏规则：3 个邻居出生；2 个邻居时保持状态
+          buffer[y][x] = (n === 3 || (grid[y][x] && n === 2)) ? 1 : 0;
+        }
+      }
+      // 交换缓冲阵列
+      [grid, buffer] = [buffer, grid];
+    }
 
-    // 3) 启动循环
-    setInterval(() => {
-      step();
-      draw(ctx);
-    }, INTERVAL_MS);
-  }
-
-  // —— 一代演化 —— 
-  function step(){
-    for (let y=0;y<ROWS;y++){
-      for (let x=0;x<COLS;x++){
-        let n=0;
-        for (let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-          if (dx||dy){
-            const yy=(y+dy+ROWS)%ROWS;
-            const xx=(x+dx+COLS)%COLS;
-            n+=grid[yy][xx];
+    // —— 绘制到画布 —— 
+    function draw(ctx) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = '#0f0';
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if (grid[y][x]) {
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
           }
         }
-        buffer[y][x] = (n===3|| (grid[y][x]&&n===2))?1:0;
       }
     }
-    [grid,buffer]=[buffer,grid];
-  }
-
-  // —— 渲染到 Canvas —— 
-  function draw(ctx){
-    ctx.fillStyle='#000';
-    ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
-    ctx.fillStyle='#0f0';
-    for (let y=0;y<ROWS;y++){
-      for (let x=0;x<COLS;x++){
-        if(grid[y][x]){
-          ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
-        }
-      }
-    }
-  }
   </script>
 </body>
 </html>
+
 
