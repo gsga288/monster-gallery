@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>骨架＋内部生命游戏</title>
+  <meta charset="UTF-8" />
+  <title>轮廓＋内部生命游戏（纯色轮廓版）</title>
   <style>
     body,html { margin:0; padding:0; background:#000; overflow:hidden; }
     #container { position:relative; width:100vw; height:100vh; }
     canvas { position:absolute; top:0; left:0; image-rendering:pixelated; }
-    #bg   { z-index:1; } /* 静态骨架轮廓 */
+    #bg   { z-index:1; } /* 纯色轮廓 */
     #life { z-index:2; } /* 内部演化 */
   </style>
 </head>
@@ -17,102 +17,106 @@
     <canvas id="life"></canvas>
   </div>
   <script>
-  // —— 参数区 —— 
-  const CELL   = 4;
-  const COLS   = 200, ROWS = 150;
-  const TICK   = 80;      // ms/步
-  const THRESH = 120;     // 亮度阈值
-  const FILL_RATE = 0.4;  // 内部初始活细胞概率
+  /* —— 参数 —— */
+  const CELL      = 4;
+  const COLS      = 200, ROWS = 150;
+  const TICK      = 80;       // ms/步
+  const THRESH    = 120;      // 亮度阈值
+  const FILL_RATE = 0.4;      // 内部随机填充率
 
-  // —— 画布上下文 —— 
+  /* —— 画布上下文 —— */
   const bgC  = document.getElementById('bg');
   const lifeC= document.getElementById('life');
-  [bgC, lifeC].forEach(c=>{ c.width=COLS*CELL; c.height=ROWS*CELL });
+  [bgC, lifeC].forEach(c=>{ c.width = COLS*CELL; c.height = ROWS*CELL; });
   const bgCtx   = bgC.getContext('2d');
   const lifeCtx = lifeC.getContext('2d');
 
-  // —— 数据 —— 
-  let mask    = Array.from({length:ROWS},()=>Array(COLS).fill(0)); // 区域掩码
-  let border  = Array.from({length:ROWS},()=>Array(COLS).fill(0)); // 边缘骨架
-  let grid    = Array.from({length:ROWS},()=>Array(COLS).fill(0)); // 活细胞
-  let buffer  = Array.from({length:ROWS},()=>Array(COLS).fill(0)); // 缓冲
+  /* —— 数据结构 —— */
+  let mask   = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  let border = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  let grid   = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  let buf    = Array.from({length:ROWS},()=>Array(COLS).fill(0));
 
-  // —— 加载形体图 —— 
+  /* —— 加载图像 —— */
   const img = new Image();
-  img.src = 'creature.png';
+  img.src = 'creature.png';  // 你的原图
   img.onload = () => {
     buildMaskAndBorder();
     seedInterior();
-    drawSkeleton();
+    buildSilhouette();  // <- 这一步生成纯色轮廓画布
     loop();
   };
 
-  // —— 1) 从图像提取 mask & border —— 
+  /* —— 1) 从原图提取 mask & border —— */
   function buildMaskAndBorder(){
     const tmp = document.createElement('canvas');
     tmp.width=COLS; tmp.height=ROWS;
-    const t = tmp.getContext('2d');
+    const t  = tmp.getContext('2d');
     t.drawImage(img,0,0,COLS,ROWS);
-    const D = t.getImageData(0,0,COLS,ROWS).data;
+    const D  = t.getImageData(0,0,COLS,ROWS).data;
 
     for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
-        const i = (y*COLS+x)*4;
+        const i   = (y*COLS+x)*4;
         const lum = (D[i]+D[i+1]+D[i+2])/3;
         mask[y][x] = lum > THRESH ? 1 : 0;
       }
     }
-    // 计算边缘：4 邻有不在 mask 的即为骨架
+    // 4 邻不全在 mask 就是骨架
     for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
         if(!mask[y][x]) continue;
-        const n = 
-          (mask[(y+1)%ROWS][x] || 0) +
-          (mask[(y-1+ROWS)%ROWS][x] || 0) +
-          (mask[y][(x+1)%COLS] || 0) +
-          (mask[y][(x-1+COLS)%COLS] || 0);
-        if(n<4) border[y][x] = 1;
+        let n=0;
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+          n += mask[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
+        });
+        if(n<4) border[y][x]=1;
       }
     }
   }
 
-  // —— 2) 在 mask 内部随机播种 —— 
+  /* —— 2) 在骨架内/外做初始填充 —— */
   function seedInterior(){
     for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
-        if(mask[y][x] && !border[y][x]){
-          grid[y][x] = Math.random() < FILL_RATE ? 1 : 0;
-        } else if(border[y][x]){
-          grid[y][x] = 1;  // 骨架永远活着
+        if(border[y][x]) {
+          grid[y][x] = 1;      // 骨架永存
+        } else if(mask[y][x]) {
+          grid[y][x] = (Math.random() < FILL_RATE) ? 1 : 0;
+        } else {
+          grid[y][x] = 0;
         }
       }
     }
   }
 
-  // —— 3) 绘制静态骨架轮廓 —— 
-  function drawSkeleton(){
-    bgCtx.clearRect(0,0,bgC.width,bgC.height);
-    bgCtx.drawImage(img,0,0,bgC.width,bgC.height);
-    // 可选：高亮骨架
-    bgCtx.strokeStyle = '#0f0';
-    bgCtx.lineWidth = 2;
-    bgCtx.beginPath();
+  let silC, silCtx;
+  /* —— 3) 生成“纯色轮廓”画布 —— */
+  function buildSilhouette(){
+    silC = document.createElement('canvas');
+    silC.width = COLS; silC.height = ROWS;
+    silCtx = silC.getContext('2d');
+    silCtx.clearRect(0,0,COLS,ROWS);
+    silCtx.fillStyle = '#0f0';
     for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
-        if(border[y][x]){
-          bgCtx.rect(x*CELL,y*CELL,CELL,CELL);
+        if(mask[y][x]){
+          silCtx.fillRect(x, y, 1, 1);
         }
       }
     }
-    bgCtx.stroke();
+    // 把 1px 格子图 缩放到像素格大小并绘到 #bg
+    bgCtx.clearRect(0,0,bgC.width,bgC.height);
+    bgCtx.imageSmoothingEnabled = false;
+    bgCtx.drawImage(silC, 0, 0, bgC.width, bgC.height);
   }
 
-  // —— 4) 单步演化（骨架静态，内部 CA） —— 
+  /* —— 4) 演化一步 —— */
   function step(){
     for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
-        if(border[y][x]){
-          buffer[y][x] = 1;  // 骨架不变
+        if(border[y][x]) {
+          buf[y][x] = 1;
         } else {
           let n=0;
           for(let dy=-1;dy<=1;dy++){
@@ -124,31 +128,32 @@
               }
             }
           }
-          buffer[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
+          buf[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
         }
       }
     }
-    [grid,buffer]=[buffer,grid];
+    [grid,buf] = [buf,grid];
   }
 
-  // —— 5) 渲染内部活细胞 —— 
-  function draw(){
+  /* —— 5) 渲染内部CA —— */
+  function drawLife(){
     lifeCtx.clearRect(0,0,lifeC.width,lifeC.height);
     lifeCtx.fillStyle = '#0f0';
     for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
+        // 只画「mask 内非骨架」的活细胞
         if(grid[y][x] && !border[y][x]){
-          lifeCtx.fillRect(x*CELL,y*CELL,CELL,CELL);
+          lifeCtx.fillRect(x*CELL, y*CELL, CELL, CELL);
         }
       }
     }
   }
 
-  // —— 6) 循环 —— 
+  /* —— 6) 循环 —— */
   function loop(){
     step();
-    draw();
-    setTimeout(loop,TICK);
+    drawLife();
+    setTimeout(loop, TICK);
   }
   </script>
 </body>
