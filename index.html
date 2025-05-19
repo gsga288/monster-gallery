@@ -1,194 +1,43 @@
-<!DOCTYPE html>
-
-<html lang="zh">
-
-<head>
-
-  <meta charset="UTF-8" />
-
-  <title>生命生物体</title>
-
-  <style>
-
-    body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
-
-    canvas { image-rendering: pixelated; box-shadow: 0 0 10px #0f0; }
-
-  </style>
-
-</head>
-
-<body>
-
-  <canvas id="life"></canvas>
-
-  <script>
-
-  // —— 配置区 —— 
-
-  const CELL = 4;      // 每个元胞像素大小
-
-  const COLS = 200, ROWS = 150;
-
-  const INTERVAL_MS = 80;
-
-
-
-  // —— 加载轮廓图 —— 
-
-  const img = new Image();
-
-  img.src = 'creature.png'; // 黑白 PNG，黑色为形状
-
-  img.onload = () => init();
-
-
-
-  // —— 创建网格 —— 
-
-  let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-
-  let buffer = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-
-
-
-  // —— 飞船模式（放在“眼睛”）—— 
-
-  const GLIDER = [[1,0],[2,1],[0,2],[1,2],[2,2]];
-
-
-
-  // —— 入口初始化 —— 
-
-  function init() {
-
-    const canvas = document.getElementById('life');
-
-    canvas.width = COLS * CELL;
-
-    canvas.height= ROWS * CELL;
-
-    const ctx = canvas.getContext('2d');
-
-
-
-    // 1) 从图像提取轮廓
-
-    const tmp = document.createElement('canvas');
-
-    tmp.width = COLS; tmp.height = ROWS;
-
-    const tctx = tmp.getContext('2d');
-
-    tctx.drawImage(img, 0, 0, COLS, ROWS);
-
-    const pixels = tctx.getImageData(0,0,COLS,ROWS).data;
-
-    for (let y=0;y<ROWS;y++){
-
-      for (let x=0;x<COLS;x++){
-
-        const i = (y*COLS + x)*4;
-
-        const v = pixels[i] < 128 ? 1 : 0; 
-
-        grid[y][x] = v;
-
-      }
-
-    }
-
-
-
-    // 2) 在轮廓“眼睛”位置叠加两个滑翔机
-
-    const eyeY = Math.floor(ROWS/3), eyeX = Math.floor(COLS/3);
-
-    GLIDER.forEach(([dx,dy]) => grid[eyeY+dy][eyeX+dx]=1);
-
-    GLIDER.forEach(([dx,dy]) => grid[eyeY+dy][COLS-eyeX-dx]=1);
-
-
-
-    // 3) 启动循环
-
-    setInterval(() => {
-
-      step();
-
-      draw(ctx);
-
-    }, INTERVAL_MS);
-
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>生命体</title>
+<style>body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}canvas{box-shadow:0 0 10px #0f0;image-rendering:pixelated}</style></head>
+<body><canvas id="c"></canvas><script>
+const CELL=4,COLS=200,ROWS=150,STEP=80,THRESH=120;
+const cvs=document.getElementById('c');cvs.width=COLS*CELL;cvs.height=ROWS*CELL;const ctx=cvs.getContext('2d');
+let g=[...Array(ROWS)].map(()=>Array(COLS).fill(0)),b=[...Array(ROWS)].map(()=>Array(COLS).fill(0));
+const GLIDER=[[1,0],[2,1],[0,2],[1,2],[2,2]];
+const img=new Image();img.src='creature.png';img.onload=()=>{seedFromImage();loop();};
+
+function seedFromImage(){
+  g.forEach(row=>row.fill(0));
+  const tmp=document.createElement('canvas');tmp.width=COLS;tmp.height=ROWS;
+  const tctx=tmp.getContext('2d');tctx.drawImage(img,0,0,COLS,ROWS);
+  const d=tctx.getImageData(0,0,COLS,ROWS).data;
+
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const i=(y*COLS+x)*4,lum=(d[i]+d[i+1]+d[i+2])/3,a=d[i+3];
+    g[y][x]=(lum>THRESH&&a>0)?1:0;     // 阈值判定
   }
+  // 眼睛滑翔机
+  const ey=Math.floor(ROWS/3),ex=Math.floor(COLS/3);
+  GLIDER.forEach(([dx,dy])=>g[ey+dy][ex+dx]=1);
+  GLIDER.forEach(([dx,dy])=>g[ey+dy][COLS-ex-dx]=1);
+}
 
-
-
-  // —— 一代演化 —— 
-
-  function step(){
-
-    for (let y=0;y<ROWS;y++){
-
-      for (let x=0;x<COLS;x++){
-
-        let n=0;
-
-        for (let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-
-          if (dx||dy){
-
-            const yy=(y+dy+ROWS)%ROWS;
-
-            const xx=(x+dx+COLS)%COLS;
-
-            n+=grid[yy][xx];
-
-          }
-
-        }
-
-        buffer[y][x] = (n===3|| (grid[y][x]&&n===2))?1:0;
-
-      }
-
-    }
-
-    [grid,buffer]=[buffer,grid];
-
+function step(){
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    let n=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)
+      if(dx||dy)n+=g[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
+    b[y][x]=(n===3||g[y][x]&&n===2)?1:0;
   }
+  [g,b]=[b,g];
+}
+function draw(){
+  ctx.fillStyle="#000";ctx.fillRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle="#0f0";
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(g[y][x])ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+}
+function loop(){step();draw();requestAnimationFrame(()=>setTimeout(loop,STEP));}
+</script></body></html>
 
-
-
-  // —— 渲染到 Canvas —— 
-
-  function draw(ctx){
-
-    ctx.fillStyle='#000';
-
-    ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
-
-    ctx.fillStyle='#0f0';
-
-    for (let y=0;y<ROWS;y++){
-
-      for (let x=0;x<COLS;x++){
-
-        if(grid[y][x]){
-
-          ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
-
-        }
-
-      }
-
-    }
-
-  }
-
-  </script>
-
-</body>
-
-</html>
 
