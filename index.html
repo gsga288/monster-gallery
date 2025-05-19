@@ -1,101 +1,144 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="utf-8" />
-  <title>生命体 · 整体滑行版</title>
+  <meta charset="UTF-8">
+  <title>有机漂浮的生命体</title>
   <style>
-    body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}
-    canvas{box-shadow:0 0 10px #0f0;image-rendering:pixelated}
+    body,html {margin:0; padding:0; background:#000; overflow:hidden;}
+    #container { position:relative; width:100vw; height:100vh; }
+    canvas { position:absolute; top:0; left:0; image-rendering:pixelated; }
+    #bg  { z-index:1; }   /* 背景轮廓 */
+    #life{ z-index:2; }   /* 边缘生命游戏 */
   </style>
 </head>
 <body>
-  <canvas id="c"></canvas>
+  <div id="container">
+    <canvas id="bg"></canvas>
+    <canvas id="life"></canvas>
+  </div>
   <script>
-  /* ===== 参数 ===== */
-  const CELL = 4;              // 单元格像素
-  const COLS = 200, ROWS = 150;
-  const STEP = 80;             // 毫秒 / 代
-  const THRESH = 120;          // 亮度阈值（0~255）
-  const SHIFT_EVERY = 5;       // 每 N 帧整体平移 1 格
+  // —— 参数 —— 
+  const CELL   = 4;        // 网格块大小
+  const COLS   = 200, ROWS = 150;
+  const THRESH = 120;      // 亮度阈值
+  const TICK   = 80;       // 演化间隔 ms
+  const AMPL   = 20;       // 漂浮振幅 px
+  const SPEED  = 0.002;    // 漂浮速度
 
-  /* ===== 画布 / 数据结构 ===== */
-  const cvs = document.getElementById('c');
-  cvs.width  = COLS * CELL;
-  cvs.height = ROWS * CELL;
-  const ctx = cvs.getContext('2d');
+  // —— 画布 & 上下文 —— 
+  const bgC  = document.getElementById('bg');
+  const life = document.getElementById('life');
+  [bgC,life].forEach(c=>{
+    c.width = COLS*CELL; c.height = ROWS*CELL;
+  });
+  const bgCtx   = bgC.getContext('2d');
+  const lifeCtx = life.getContext('2d');
 
-  let grid   = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-  let buffer = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+  // —— 数据 —— 
+  let mask   = Array.from({length:ROWS},()=>Array(COLS).fill(0)); // 形体掩码
+  let edge   = Array.from({length:ROWS},()=>Array(COLS).fill(0)); // 边缘格点
+  let grid   = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  let buffer = Array.from({length:ROWS},()=>Array(COLS).fill(0));
 
-  /* ===== 初始图像 ===== */
+  // —— 加载图像 —— 
   const img = new Image();
-  img.src = 'creature.png';         // 请放同目录透明/黑底 PNG
-  img.onload = () => { seedFromImage(); loop(); };
+  img.src = 'creature.png';
+  img.onload = () => {
+    seedMask();
+    seedEdges();
+    drawMask();
+    loop();
+  };
 
-  /* ===== 取轮廓播种 & 眼睛滑翔机 ===== */
-  const GLIDER = [[1,0],[2,1],[0,2],[1,2],[2,2]];
-  function seedFromImage(){
-    grid.forEach(r => r.fill(0));
-
+  // —— 1) 从图像生成 mask —— 
+  function seedMask(){
+    // 把图缩到格子尺寸
     const tmp = document.createElement('canvas');
     tmp.width = COLS; tmp.height = ROWS;
     const tctx = tmp.getContext('2d');
-    tctx.drawImage(img, 0, 0, COLS, ROWS);
-    const d = tctx.getImageData(0,0,COLS,ROWS).data;
-
-    for(let y=0;y<ROWS;y++)
+    tctx.drawImage(img,0,0,COLS,ROWS);
+    const D = tctx.getImageData(0,0,COLS,ROWS).data;
+    for(let y=0;y<ROWS;y++){
       for(let x=0;x<COLS;x++){
         const i=(y*COLS+x)*4;
-        const lum=(d[i]+d[i+1]+d[i+2])/3, a=d[i+3];
-        grid[y][x] = (lum > THRESH && a > 0) ? 1 : 0;
+        const lum = (D[i]+D[i+1]+D[i+2])/3;
+        mask[y][x] = (lum>THRESH) ? 1 : 0;
       }
-
-    // “眼睛”滑翔机
-    const ey = Math.floor(ROWS/3), ex = Math.floor(COLS/3);
-    GLIDER.forEach(([dx,dy]) => grid[ey+dy][ex+dx]            = 1);
-    GLIDER.forEach(([dx,dy]) => grid[ey+dy][COLS-ex-1-dx]      = 1);
-  }
-
-  /* ===== 生命游戏演化规则 ===== */
-  function step(){
-    for(let y=0;y<ROWS;y++)
-      for(let x=0;x<COLS;x++){
-        let n = 0;
-        for(let dy=-1;dy<=1;dy++)
-          for(let dx=-1;dx<=1;dx++)
-            if(dx||dy) n += grid[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
-
-        buffer[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
-      }
-    [grid,buffer] = [buffer,grid];
-  }
-
-  /* ===== 渲染，带整体平移 ===== */
-  let shiftX = 0, shiftY = 0, tick = 0;
-  function draw(){
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0,0,cvs.width,cvs.height);
-
-    ctx.fillStyle = '#0f0';
-    for(let y=0;y<ROWS;y++)
-      for(let x=0;x<COLS;x++)
-        if(grid[y][x])
-          ctx.fillRect(((x+shiftX)%COLS)*CELL,
-                       ((y+shiftY)%ROWS)*CELL,
-                       CELL, CELL);
-
-    // 每 SHIFT_EVERY 帧整体漂移 1 格（右下方向）
-    if(++tick % SHIFT_EVERY === 0){
-      shiftX = (shiftX + 1) % COLS;
-      shiftY = (shiftY + 1) % ROWS;   // 若只想水平漂移，可去掉这一行
     }
   }
 
-  /* ===== 主循环 ===== */
+  // —— 2) 找到 mask 的“边缘” —— 
+  function seedEdges(){
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(!mask[y][x]) continue;
+        // 只要有任意 4 邻点非 mask，就算边缘
+        const n = (mask[(y+1)%ROWS][x]||0)
+                + (mask[(y-1+ROWS)%ROWS][x]||0)
+                + (mask[y][(x+1)%COLS]||0)
+                + (mask[y][(x-1+COLS)%COLS]||0);
+        edge[y][x] = (n < 4) ? 1 : 0;
+        // 初始演化格子只播 seed 边缘
+        grid[y][x] = edge[y][x];
+      }
+    }
+  }
+
+  // —— 3) 画出静态轮廓 —— 
+  function drawMask(){
+    bgCtx.clearRect(0,0,bgC.width,bgC.height);
+    bgCtx.drawImage(img,0,0,bgC.width,bgC.height);
+  }
+
+  // —— 4) 生命游戏演化（仅限在 edge 区域） —— 
+  function step(){
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const isEdge = edge[y][x];
+        if(!isEdge){
+          buffer[y][x] = 0;
+        } else {
+          let n=0;
+          for(let dy=-1;dy<=1;dy++)
+          for(let dx=-1;dx<=1;dx++) if(dx||dy){
+            const yy=(y+dy+ROWS)%ROWS;
+            const xx=(x+dx+COLS)%COLS;
+            n += grid[yy][xx];
+          }
+          buffer[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
+        }
+      }
+    }
+    [grid,buffer] = [buffer,grid];
+  }
+
+  // —— 5) 渲染 & 有机漂浮 —— 
+  let t0 = performance.now();
+  function draw(){
+    // 生命层
+    lifeCtx.clearRect(0,0,life.width,life.height);
+    lifeCtx.fillStyle = '#0f0';
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(grid[y][x]){
+          lifeCtx.fillRect(x*CELL,y*CELL,CELL,CELL);
+        }
+      }
+    }
+    // 漂浮效果
+    const dt = performance.now() - t0;
+    const dx = Math.sin(dt * SPEED) * AMPL;
+    const dy = Math.cos(dt * SPEED * 0.7) * AMPL;
+    // 把 container 做 translate
+    document.getElementById('container').style.transform =
+      `translate(${dx}px,${dy}px)`;
+  }
+
+  // —— 6) 主循环 —— 
   function loop(){
     step();
     draw();
-    requestAnimationFrame(() => setTimeout(loop, STEP));
+    setTimeout(loop, TICK);
   }
   </script>
 </body>
