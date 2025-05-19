@@ -1,43 +1,104 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>生命体</title>
-<style>body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}canvas{box-shadow:0 0 10px #0f0;image-rendering:pixelated}</style></head>
-<body><canvas id="c"></canvas><script>
-const CELL=4,COLS=200,ROWS=150,STEP=80,THRESH=120;
-const cvs=document.getElementById('c');cvs.width=COLS*CELL;cvs.height=ROWS*CELL;const ctx=cvs.getContext('2d');
-let g=[...Array(ROWS)].map(()=>Array(COLS).fill(0)),b=[...Array(ROWS)].map(()=>Array(COLS).fill(0));
-const GLIDER=[[1,0],[2,1],[0,2],[1,2],[2,2]];
-const img=new Image();img.src='creature.png';img.onload=()=>{seedFromImage();loop();};
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <title>生命体 · 整体滑行版</title>
+  <style>
+    body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}
+    canvas{box-shadow:0 0 10px #0f0;image-rendering:pixelated}
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <script>
+  /* ===== 参数 ===== */
+  const CELL = 4;              // 单元格像素
+  const COLS = 200, ROWS = 150;
+  const STEP = 80;             // 毫秒 / 代
+  const THRESH = 120;          // 亮度阈值（0~255）
+  const SHIFT_EVERY = 5;       // 每 N 帧整体平移 1 格
 
-function seedFromImage(){
-  g.forEach(row=>row.fill(0));
-  const tmp=document.createElement('canvas');tmp.width=COLS;tmp.height=ROWS;
-  const tctx=tmp.getContext('2d');tctx.drawImage(img,0,0,COLS,ROWS);
-  const d=tctx.getImageData(0,0,COLS,ROWS).data;
+  /* ===== 画布 / 数据结构 ===== */
+  const cvs = document.getElementById('c');
+  cvs.width  = COLS * CELL;
+  cvs.height = ROWS * CELL;
+  const ctx = cvs.getContext('2d');
 
-  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
-    const i=(y*COLS+x)*4,lum=(d[i]+d[i+1]+d[i+2])/3,a=d[i+3];
-    g[y][x]=(lum>THRESH&&a>0)?1:0;     // 阈值判定
+  let grid   = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+  let buffer = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+
+  /* ===== 初始图像 ===== */
+  const img = new Image();
+  img.src = 'creature.png';         // 请放同目录透明/黑底 PNG
+  img.onload = () => { seedFromImage(); loop(); };
+
+  /* ===== 取轮廓播种 & 眼睛滑翔机 ===== */
+  const GLIDER = [[1,0],[2,1],[0,2],[1,2],[2,2]];
+  function seedFromImage(){
+    grid.forEach(r => r.fill(0));
+
+    const tmp = document.createElement('canvas');
+    tmp.width = COLS; tmp.height = ROWS;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(img, 0, 0, COLS, ROWS);
+    const d = tctx.getImageData(0,0,COLS,ROWS).data;
+
+    for(let y=0;y<ROWS;y++)
+      for(let x=0;x<COLS;x++){
+        const i=(y*COLS+x)*4;
+        const lum=(d[i]+d[i+1]+d[i+2])/3, a=d[i+3];
+        grid[y][x] = (lum > THRESH && a > 0) ? 1 : 0;
+      }
+
+    // “眼睛”滑翔机
+    const ey = Math.floor(ROWS/3), ex = Math.floor(COLS/3);
+    GLIDER.forEach(([dx,dy]) => grid[ey+dy][ex+dx]            = 1);
+    GLIDER.forEach(([dx,dy]) => grid[ey+dy][COLS-ex-1-dx]      = 1);
   }
-  // 眼睛滑翔机
-  const ey=Math.floor(ROWS/3),ex=Math.floor(COLS/3);
-  GLIDER.forEach(([dx,dy])=>g[ey+dy][ex+dx]=1);
-  GLIDER.forEach(([dx,dy])=>g[ey+dy][COLS-ex-dx]=1);
-}
 
-function step(){
-  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
-    let n=0;
-    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)
-      if(dx||dy)n+=g[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
-    b[y][x]=(n===3||g[y][x]&&n===2)?1:0;
+  /* ===== 生命游戏演化规则 ===== */
+  function step(){
+    for(let y=0;y<ROWS;y++)
+      for(let x=0;x<COLS;x++){
+        let n = 0;
+        for(let dy=-1;dy<=1;dy++)
+          for(let dx=-1;dx<=1;dx++)
+            if(dx||dy) n += grid[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
+
+        buffer[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
+      }
+    [grid,buffer] = [buffer,grid];
   }
-  [g,b]=[b,g];
-}
-function draw(){
-  ctx.fillStyle="#000";ctx.fillRect(0,0,cvs.width,cvs.height);
-  ctx.fillStyle="#0f0";
-  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(g[y][x])ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
-}
-function loop(){step();draw();requestAnimationFrame(()=>setTimeout(loop,STEP));}
-</script></body></html>
+
+  /* ===== 渲染，带整体平移 ===== */
+  let shiftX = 0, shiftY = 0, tick = 0;
+  function draw(){
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#0f0';
+    for(let y=0;y<ROWS;y++)
+      for(let x=0;x<COLS;x++)
+        if(grid[y][x])
+          ctx.fillRect(((x+shiftX)%COLS)*CELL,
+                       ((y+shiftY)%ROWS)*CELL,
+                       CELL, CELL);
+
+    // 每 SHIFT_EVERY 帧整体漂移 1 格（右下方向）
+    if(++tick % SHIFT_EVERY === 0){
+      shiftX = (shiftX + 1) % COLS;
+      shiftY = (shiftY + 1) % ROWS;   // 若只想水平漂移，可去掉这一行
+    }
+  }
+
+  /* ===== 主循环 ===== */
+  function loop(){
+    step();
+    draw();
+    requestAnimationFrame(() => setTimeout(loop, STEP));
+  }
+  </script>
+</body>
+</html>
 
 
