@@ -175,14 +175,17 @@ function render() {
 
   const container = document.getElementById('media-container');
   container.innerHTML = '';  // 清空
-  if (chosen.endsWith('.mp4')) {
-    const v = document.createElement('video');
-    v.src = chosen;
-    v.autoplay = true;
-    v.loop = true;
-    v.muted = true;
-    container.appendChild(v);
-  } else {
+if (chosen.endsWith('.mp4')) {
+  const v = document.createElement('video');
+  v.src = chosen;
+  v.autoplay = true;
+  v.loop     = true;
+  v.muted    = true;     // 免去静音检测
+  v.playsInline = true;  // iOS/Android 都加上
+  v.preload = 'auto';    // 提前缓冲
+  v.setAttribute('playsinline', ''); 
+  container.appendChild(v);
+} else {
     const img = document.createElement('img');
     img.src = chosen;
     container.appendChild(img);
