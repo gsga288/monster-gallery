@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>滑翔机＋振荡生命体</title>
+  <style>
+    body,html { margin:0; padding:0; background:#000; overflow:hidden; }
+    #container {
+      position:absolute; top:0; left:0;
+      /* 用 transform 来移动整个生命体 */
+      will-change: transform;
+    }
+    canvas {
+      display:block;
+      image-rendering:pixelated;
+    }
+  </style>
+</head>
+<body>
+  <!-- container 里放两个 canvas：骨架和内部呼吸 -->
+  <div id="container">
+    <canvas id="bg"></canvas>
+    <canvas id="life"></canvas>
+  </div>
+  <script>
+  // —— 参数 —— 
+  const CELL   = 4;
+  const COLS   = 200, ROWS = 150;
+  const TICK   = 80;          // ms/步
+  const FILL   = 0.5;         // 内部填充率
+  const RESEED = 200;         // 间隔多少步重播内部
+
+  // —— 画布设置 —— 
+  const container = document.getElementById('container');
+  const bgC   = document.getElementById('bg');
+  const lifeC = document.getElementById('life');
+  [bgC, lifeC].forEach(c => {
+    c.width  = COLS * CELL;
+    c.height = ROWS * CELL;
+  });
+  const bgCtx   = bgC.getContext('2d');
+  const lifeCtx = lifeC.getContext('2d');
+
+  // —— 数据结构 —— 
+  let mask   = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  let border = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  let grid   = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  let buf    = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+
+  // —— 滑翔机/振动参数 —— 
+  let frame = 0;
+  // 每帧水平移动 1px，垂直 ±振幅 10px
+  const speedX = 1;
+  const ampY   = 10;
+  const omega  = 0.02; // 振动角速度
+
+  // —— 初始化并启动 —— 
+  buildMaskAndBorder();
+  seedInterior();
+  drawSkeleton();
+  loop();
+
+  // —— 1) 画骨架并打孔眼睛 —— 
+  function buildMaskAndBorder(){
+    // 我这里直接用前面那套绘制几何的方法生成 mask/border
+    // 头圆、耳三角、身体椭圆、腿矩形、嘴矩形，然后 destination-out 打孔眼睛
+    const tmp = document.createElement('canvas');
+    tmp.width = COLS; tmp.height = ROWS;
+    const t = tmp.getContext('2d');
+    t.clearRect(0,0,COLS,ROWS);
+    t.fillStyle = '#fff';
+    const cx = COLS/2, cy = ROWS*0.28, r = ROWS*0.18;
+
+    // 头
+    t.beginPath(); t.arc(cx,cy,r,0,2*Math.PI); t.fill();
+    // 耳
+    t.beginPath();
+    t.moveTo(cx-r,cy);
+    t.lineTo(cx-r*1.4,cy-r*1.2);
+    t.lineTo(cx-r*0.6,cy-r*0.8);
+    t.closePath();
+    t.moveTo(cx+r,cy);
+    t.lineTo(cx+r*1.4,cy-r*1.2);
+    t.lineTo(cx+r*0.6,cy-r*0.8);
+    t.closePath();
+    t.fill();
+    // 身体
+    t.beginPath(); t.ellipse(cx,cy+r*0.9,r*1.2,r*1.4,0,0,2*Math.PI); t.fill();
+    // 腿
+    const lw=r*0.3, lh=r*1.0;
+    t.fillRect(cx-r*0.5-lw/2, cy+r*1.85, lw, lh);
+    t.fillRect(cx+r*0.5-lw/2, cy+r*1.85, lw, lh);
+    // 嘴
+    const mw=r*0.8,mh=r*0.1;
+    t.fillRect(cx-mw/2, cy+r*0.4, mw, mh);
+
+    // 打孔: 眼睛
+    const er = r*0.15;
+    t.globalCompositeOperation = 'destination-out';
+    t.beginPath(); t.arc(cx-r*0.4,cy-r*0.05,er,0,2*Math.PI); t.fill();
+    t.beginPath(); t.arc(cx+r*0.4,cy-r*0.05,er,0,2*Math.PI); t.fill();
+    t.globalCompositeOperation = 'source-over';
+
+    // 拷贝到 mask
+    const D = t.getImageData(0,0,COLS,ROWS).data;
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        mask[y][x] = D[(y*COLS+x)*4] > 128 ? 1 : 0;
+      }
+    }
+    // border: 四邻中有空白即边缘
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(!mask[y][x]) continue;
+        let n=0;
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+          n += mask[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
+        });
+        if(n<4) border[y][x] = 1;
+      }
+    }
+  }
+
+  // —— 2) 骨架永存，内部随机播种 —— 
+  function seedInterior(){
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(border[y][x])       grid[y][x] = 1;
+        else if(mask[y][x])    grid[y][x] = Math.random() < FILL ? 1 : 0;
+        else                    grid[y][x] = 0;
+      }
+    }
+  }
+
+  // —— 3) 在 bgCtx 里只画 mask 区域（纯绿色骨架） —— 
+  function drawSkeleton(){
+    bgCtx.clearRect(0,0,bgC.width,bgC.height);
+    bgCtx.fillStyle = '#0f0';
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(mask[y][x]){
+          bgCtx.fillRect(x*CELL, y*CELL, CELL, CELL);
+        }
+      }
+    }
+  }
+
+  // —— 4) Conway 演化一步 —— 
+  function stepCA(){
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(border[y][x]){
+          buf[y][x] = 1;
+        } else {
+          let n=0;
+          for(let dy=-1;dy<=1;dy++){
+            for(let dx=-1;dx<=1;dx++){
+              if(dx||dy){
+                const yy=(y+dy+ROWS)%ROWS;
+                const xx=(x+dx+COLS)%COLS;
+                n += grid[yy][xx];
+              }
+            }
+          }
+          buf[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
+        }
+      }
+    }
+    [grid,buf] = [buf,grid];
+  }
+
+  // —— 5) 渲染内部呼吸 —— 
+  function drawLife(){
+    lifeCtx.clearRect(0,0,lifeC.width,lifeC.height);
+    lifeCtx.fillStyle = '#0f0';
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(grid[y][x] && !border[y][x]){
+          lifeCtx.fillRect(x*CELL, y*CELL, CELL, CELL);
+        }
+      }
+    }
+  }
+
+  // —— 6) 主循环：CA + 重播 + 平移振荡 —— 
+  function loop(){
+    stepCA();
+    drawLife();
+    frame++;
+    if(frame % RESEED === 0) seedInterior();
+
+    // 计算 container 的位移
+    const dx = (frame * speedX) % (COLS*CELL + window.innerWidth) - CELL*COLS;
+    // 垂直正弦振荡
+    const dy = ampY * Math.sin(frame * omega);
+
+    container.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    setTimeout(loop, TICK);
+  }
+  </script>
+</body>
+</html>
+
+

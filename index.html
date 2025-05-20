@@ -2,161 +2,199 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>轮廓＋内部生命游戏（纯色轮廓版）</title>
+  <title>16 类宠物呈现</title>
   <style>
-    body,html { margin:0; padding:0; background:#000; overflow:hidden; }
-    #container { position:relative; width:100vw; height:100vh; }
-    canvas { position:absolute; top:0; left:0; image-rendering:pixelated; }
-    #bg   { z-index:1; } /* 纯色轮廓 */
-    #life { z-index:2; } /* 内部演化 */
+    body, html {
+      margin: 0; padding: 0;
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex; flex-direction: column;
+      align-items: center;
+    }
+    #info {
+      margin: 20px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    #media-container {
+      position: relative;
+      width: 80vw; max-width: 600px;
+      height: 80vh; max-height: 400px;
+      background: #222;
+      display: flex; justify-content: center; align-items: center;
+    }
+    #media-container img,
+    #media-container video {
+      max-width: 100%; max-height: 100%;
+    }
+    video { background: #000; }
+    button {
+      margin: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div id="container">
-    <canvas id="bg"></canvas>
-    <canvas id="life"></canvas>
+
+  <div id="info">
+    <div>❤️ 心率: <span id="heart"></span></div>
+    <div>✋ 抚摸距离: <span id="touch"></span></div>
+    <div>🔊 声音分贝: <span id="sound"></span></div>
+    <div>⏱️ 互动时长: <span id="time"></span></div>
+    <div>分类类别: <code id="category"></code></div>
   </div>
-  <script>
-  /* —— 参数 —— */
-  const CELL      = 4;
-  const COLS      = 200, ROWS = 150;
-  const TICK      = 80;       // ms/步
-  const THRESH    = 120;      // 亮度阈值
-  const FILL_RATE = 0.4;      // 内部随机填充率
 
-  /* —— 画布上下文 —— */
-  const bgC  = document.getElementById('bg');
-  const lifeC= document.getElementById('life');
-  [bgC, lifeC].forEach(c=>{ c.width = COLS*CELL; c.height = ROWS*CELL; });
-  const bgCtx   = bgC.getContext('2d');
-  const lifeCtx = lifeC.getContext('2d');
+  <div id="media-container"></div>
 
-  /* —— 数据结构 —— */
-  let mask   = Array.from({length:ROWS},()=>Array(COLS).fill(0));
-  let border = Array.from({length:ROWS},()=>Array(COLS).fill(0));
-  let grid   = Array.from({length:ROWS},()=>Array(COLS).fill(0));
-  let buf    = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  <button id="reload">🔄 再来一次</button>
 
-  /* —— 加载图像 —— */
-  const img = new Image();
-  img.src = 'creature.png';  // 你的原图
-  img.onload = () => {
-    buildMaskAndBorder();
-    seedInterior();
-    buildSilhouette();  // <- 这一步生成纯色轮廓画布
-    loop();
+<script>
+// —— 1. 四个参数随机生成 —— 
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function genParams() {
+  return {
+    heart: randomInt(60,100),      // 60-100
+    touch: randomInt(0,50),        // 0-50
+    sound: randomInt(0,120),       // 0-120
+    time:  randomInt(0,100)        // 0-100
   };
+}
 
-  /* —— 1) 从原图提取 mask & border —— */
-  function buildMaskAndBorder(){
-    const tmp = document.createElement('canvas');
-    tmp.width=COLS; tmp.height=ROWS;
-    const t  = tmp.getContext('2d');
-    t.drawImage(img,0,0,COLS,ROWS);
-    const D  = t.getImageData(0,0,COLS,ROWS).data;
+// —— 2. 参数到二值的映射规则 —— 
+function toBit(val, threshold) {
+  return val > threshold ? '1' : '0';
+}
+function categorize(p) {
+  // 心率 60-80 → 文静(0) / 81-100 → 活跃(1)
+  const b0 = toBit(p.heart, 80);
+  // 抚摸 0-25 → 亲近(0) / 26-50 → 疏远(1)
+  const b1 = toBit(p.touch, 25);
+  // 声音 0-80 → 放松(0) / 81-120 → 警觉(1)
+  const b2 = toBit(p.sound, 80);
+  // 互动 0-30 → 试探(0) / 31-100 → 亲密(1)
+  const b3 = toBit(p.time, 30);
+  return b0 + b1 + b2 + b3;       // e.g. "0101"
+}
 
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        const i   = (y*COLS+x)*4;
-        const lum = (D[i]+D[i+1]+D[i+2])/3;
-        mask[y][x] = lum > THRESH ? 1 : 0;
-      }
-    }
-    // 4 邻不全在 mask 就是骨架
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        if(!mask[y][x]) continue;
-        let n=0;
-        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
-          n += mask[(y+dy+ROWS)%ROWS][(x+dx+COLS)%COLS];
-        });
-        if(n<4) border[y][x]=1;
-      }
-    }
+// —— 3. 16 类媒体映射 —— 
+// 这里我们不硬编码每个文件名，而是动态读取目录……
+// 但前端无法直接列目录，所以我们需要提前写一份清单。
+// 如果你有固定文件名，比如 img1.png、vid1.mp4……
+// 也可以在这里列出。示例中我假设每个目录下只有 a.mp4,b.png 两个文件：
+const MEDIA_MAP = {
+  "0000": [
+    "media/calm_friendly_relaxed_cautious/a.png",
+    "media/calm_friendly_relaxed_cautious/b.mp4"
+  ],
+  "0001": [
+    "media/calm_friendly_relaxed_loving/a.png",
+    "media/calm_friendly_relaxed_loving/b.mp4"
+  ],
+  "0010": [
+    "media/calm_friendly_alert_cautious/a.png",
+    "media/calm_friendly_alert_cautious/b.mp4"
+  ],
+  "0011": [
+    "media/calm_friendly_alert_loving/a.png",
+    "media/calm_friendly_alert_loving/b.mp4"
+  ],
+  "0100": [
+    "media/calm_reserved_relaxed_cautious/a.png",
+    "media/calm_reserved_relaxed_cautious/b.mp4"
+  ],
+  "0101": [
+    "media/calm_reserved_relaxed_loving/a.png",
+    "media/calm_reserved_relaxed_loving/b.mp4"
+  ],
+  "0110": [
+    "media/calm_reserved_alert_cautious/a.png",
+    "media/calm_reserved_alert_cautious/b.mp4"
+  ],
+  "0111": [
+    "media/calm_reserved_alert_loving/a.png",
+    "media/calm_reserved_alert_loving/b.mp4"
+  ],
+  "1000": [
+    "media/excited_friendly_relaxed_cautious/a.png",
+    "media/excited_friendly_relaxed_cautious/b.mp4"
+  ],
+  "1001": [
+    "media/excited_friendly_relaxed_loving/a.png",
+    "media/excited_friendly_relaxed_loving/b.mp4"
+  ],
+  "1010": [
+    "media/excited_friendly_alert_cautious/a.png",
+    "media/excited_friendly_alert_cautious/b.mp4"
+  ],
+  "1011": [
+    "media/excited_friendly_alert_loving/a.png",
+    "media/excited_friendly_alert_loving/b.mp4"
+  ],
+  "1100": [
+    "media/excited_reserved_relaxed_cautious/a.png",
+    "media/excited_reserved_relaxed_cautious/b.mp4"
+  ],
+  "1101": [
+    "media/excited_reserved_relaxed_loving/a.png",
+    "media/excited_reserved_relaxed_loving/b.mp4"
+  ],
+  "1110": [
+    "media/excited_reserved_alert_cautious/a.png",
+    "media/excited_reserved_alert_cautious/b.mp4"
+  ],
+  "1111": [
+    "media/excited_reserved_alert_loving/a.png",
+    "media/excited_reserved_alert_loving/b.mp4"
+  ]
+};
+
+
+// —— 4. 主函数：生成、分类、展示 —— 
+function render() {
+  const p = genParams();
+  document.getElementById('heart').textContent = p.heart;
+  document.getElementById('touch').textContent = p.touch;
+  document.getElementById('sound').textContent = p.sound;
+  document.getElementById('time').textContent  = p.time;
+
+  const cat = categorize(p);
+  document.getElementById('category').textContent = cat;
+
+  const list = MEDIA_MAP[cat] || [];
+  if (!list.length) {
+    console.warn(`类 ${cat} 下没有配置媒体`);
+    return;
   }
+  // 随机挑一个
+  const chosen = list[Math.floor(Math.random()*list.length)];
 
-  /* —— 2) 在骨架内/外做初始填充 —— */
-  function seedInterior(){
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        if(border[y][x]) {
-          grid[y][x] = 1;      // 骨架永存
-        } else if(mask[y][x]) {
-          grid[y][x] = (Math.random() < FILL_RATE) ? 1 : 0;
-        } else {
-          grid[y][x] = 0;
-        }
-      }
-    }
+  const container = document.getElementById('media-container');
+  container.innerHTML = '';  // 清空
+  if (chosen.endsWith('.mp4')) {
+    const v = document.createElement('video');
+    v.src = chosen;
+    v.autoplay = true;
+    v.loop = true;
+    v.muted = true;
+    container.appendChild(v);
+  } else {
+    const img = document.createElement('img');
+    img.src = chosen;
+    container.appendChild(img);
   }
+}
 
-  let silC, silCtx;
-  /* —— 3) 生成“纯色轮廓”画布 —— */
-  function buildSilhouette(){
-    silC = document.createElement('canvas');
-    silC.width = COLS; silC.height = ROWS;
-    silCtx = silC.getContext('2d');
-    silCtx.clearRect(0,0,COLS,ROWS);
-    silCtx.fillStyle = '#0f0';
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        if(mask[y][x]){
-          silCtx.fillRect(x, y, 1, 1);
-        }
-      }
-    }
-    // 把 1px 格子图 缩放到像素格大小并绘到 #bg
-    bgCtx.clearRect(0,0,bgC.width,bgC.height);
-    bgCtx.imageSmoothingEnabled = false;
-    bgCtx.drawImage(silC, 0, 0, bgC.width, bgC.height);
-  }
+// —— 5. 绑定按钮 & 首次渲染 —— 
+document.getElementById('reload')
+  .addEventListener('click', render);
 
-  /* —— 4) 演化一步 —— */
-  function step(){
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        if(border[y][x]) {
-          buf[y][x] = 1;
-        } else {
-          let n=0;
-          for(let dy=-1;dy<=1;dy++){
-            for(let dx=-1;dx<=1;dx++){
-              if(dx||dy){
-                const yy=(y+dy+ROWS)%ROWS;
-                const xx=(x+dx+COLS)%COLS;
-                n += grid[yy][xx];
-              }
-            }
-          }
-          buf[y][x] = (n===3 || (grid[y][x]&&n===2)) ? 1 : 0;
-        }
-      }
-    }
-    [grid,buf] = [buf,grid];
-  }
+render();
+</script>
 
-  /* —— 5) 渲染内部CA —— */
-  function drawLife(){
-    lifeCtx.clearRect(0,0,lifeC.width,lifeC.height);
-    lifeCtx.fillStyle = '#0f0';
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        // 只画「mask 内非骨架」的活细胞
-        if(grid[y][x] && !border[y][x]){
-          lifeCtx.fillRect(x*CELL, y*CELL, CELL, CELL);
-        }
-      }
-    }
-  }
-
-  /* —— 6) 循环 —— */
-  function loop(){
-    step();
-    drawLife();
-    setTimeout(loop, TICK);
-  }
-  </script>
 </body>
 </html>
-
-
