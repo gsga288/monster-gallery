@@ -155,49 +155,64 @@ const MEDIA_MAP = {
 
 
 // —— 4. 主函数：生成、分类、展示 —— 
-function render() {
-  const p = genParams();
-  document.getElementById('heart').textContent = p.heart;
-  document.getElementById('touch').textContent = p.touch;
-  document.getElementById('sound').textContent = p.sound;
-  document.getElementById('time').textContent  = p.time;
+  function render() {
+    // 1) 随机参数、展示数值
+    const p = genParams();
+    document.getElementById('heart').textContent = p.heart;
+    document.getElementById('touch').textContent = p.touch;
+    document.getElementById('sound').textContent = p.sound;
+    document.getElementById('time').textContent  = p.time;
+    const cat = categorize(p);
+    document.getElementById('category').textContent = cat;
 
-  const cat = categorize(p);
-  document.getElementById('category').textContent = cat;
+    // 2) 挑媒体
+    const list = MEDIA_MAP[cat] || [];
+    if (!list.length) {
+      console.warn(`类别 ${cat} 没有配置媒体`);
+      return;
+    }
+    const chosen = list[Math.floor(Math.random() * list.length)];
 
-  const list = MEDIA_MAP[cat] || [];
-  if (!list.length) {
-    console.warn(`类 ${cat} 下没有配置媒体`);
-    return;
+    // 3) 插到页面
+    const container = document.getElementById('media-container');
+    container.innerHTML = '';
+
+    if (chosen.endsWith('.mp4')) {
+      const v = document.createElement('video');
+      v.src = chosen;
+      v.autoplay     = true;
+      v.loop         = true;
+      v.muted        = true;
+      v.preload      = 'auto';
+      v.playsInline  = true;
+      v.setAttribute('playsinline', '');   // 兼容老 iOS
+      v.setAttribute('webkit-playsinline', ''); // 更老的 Safari
+
+      // 如果 metadata 加载完，再主动 play 一次
+      v.addEventListener('loadedmetadata', () => {
+        v.play().catch(err => {
+          console.error('Video play() 失败:', err);
+        });
+      });
+
+      // 出错日志
+      v.addEventListener('error', (e) => {
+        console.error('Video 加载出错:', chosen, e);
+      });
+
+      container.appendChild(v);
+    } else {
+      const img = document.createElement('img');
+      img.src = chosen;
+      img.onerror = () => console.error('图片加载失败:', chosen);
+      container.appendChild(img);
+    }
   }
-  // 随机挑一个
-  const chosen = list[Math.floor(Math.random()*list.length)];
 
-  const container = document.getElementById('media-container');
-  container.innerHTML = '';  // 清空
-if (chosen.endsWith('.mp4')) {
-  const v = document.createElement('video');
-  v.src = chosen;
-  v.autoplay = true;
-  v.loop     = true;
-  v.muted    = true;     // 免去静音检测
-  v.playsInline = true;  // iOS/Android 都加上
-  v.preload = 'auto';    // 提前缓冲
-  v.setAttribute('playsinline', ''); 
-  container.appendChild(v);
-} else {
-    const img = document.createElement('img');
-    img.src = chosen;
-    container.appendChild(img);
-  }
-}
-
-// —— 5. 绑定按钮 & 首次渲染 —— 
-document.getElementById('reload')
-  .addEventListener('click', render);
-
-render();
+  document.getElementById('reload').addEventListener('click', render);
+  render();
 </script>
+
 
 </body>
 </html>
