@@ -2,90 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- 加上 viewport，确保移动端布局正确 -->
+  <!-- 确保移动端布局正确 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pet Card & Voice Chat</title>
-  <!-- 先加载 API key -->
-  <script src="config.js"></script>
+  <!-- 1. 先加载 API Key -->
+  <script src="./config.js"></script>
   <style>
-    /* --------- 全局 & 布局 --------- */
+    /* -------- 全局 & 布局 -------- */
     body, html {
-      margin:0; padding:0;
+      margin: 0; padding: 0;
       background: url('wonderland.png') no-repeat center center fixed;
       background-size: cover;
-      font-family: sans-serif; color:#eee;
-      display:flex; flex-direction:column; align-items:center;
-      min-height:100vh;
+      font-family: sans-serif;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
-    .card {            /* 宠物卡牌容器 */
-      width:80vw; max-width:500px;
-      background:rgba(34,34,34,0.9);
-      border:2px solid #444; border-radius:8px;
-      box-shadow:0 0 10px rgba(0,0,0,0.6);
-      overflow:hidden; display:flex; flex-direction:column;
-      margin-top:20px;
+    /* 宠物卡牌 */
+    .card {
+      width: 80vw; max-width: 500px;
+      background: rgba(34,34,34,0.9);
+      border: 2px solid #444;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.6);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin-top: 20px;
     }
     .card-header {
-      display:flex; justify-content:space-between;
-      padding:8px 12px; background:#333;
-      border-bottom:1px solid #444;
+      display: flex; justify-content: space-between;
+      padding: 8px 12px;
+      background: #333;
+      border-bottom: 1px solid #444;
     }
-    .pet-name { font-size:1.2em; font-weight:bold; }
+    .pet-name { font-size: 1.2em; font-weight: bold; }
     .pet-rarity {
-      font-size:1.2em; padding:2px 6px;
-      border-radius:4px; background:gold; color:#111;
+      font-size: 1.2em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: gold;
+      color: #111;
     }
     .card-params {
-      padding:8px 12px; background:#2a2a2a;
-      border-bottom:1px solid #444;
-      display:flex; justify-content:space-around;
-      font-size:0.95em;
+      padding: 8px 12px;
+      background: #2a2a2a;
+      border-bottom: 1px solid #444;
+      display: flex;
+      justify-content: space-around;
+      font-size: 0.95em;
     }
-    .card-params div { display:flex; align-items:center; gap:4px; }
-
+    .card-params div {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
     /* 视频区域：16:9 并充满容器 */
     #media-container {
-      width:100%; padding-bottom:56.25%; /* 16:9 */
-      position:relative; background:#000;
+      width: 100%;
+      padding-bottom: 56.25%; /* 16:9 */
+      position: relative;
+      background: #000;
     }
     #media-container video {
-      position:absolute; top:0; left:0;
-      width:100%; height:100%;
-      object-fit:cover;    /* cover 去黑边 */
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
     }
-
     .pet-desc {
-      padding:12px; background:#222;
-      line-height:1.4; font-size:0.95em;
+      padding: 12px;
+      background: #222;
+      line-height: 1.4;
+      font-size: 0.95em;
     }
-
     /* 聊天区 */
     #chat {
-      width:80vw; max-width:500px;
-      margin:20px 0; padding:10px;
-      background:rgba(0,0,0,0.6); border-radius:8px;
-      display:flex; flex-direction:column;
+      width: 80vw; max-width: 500px;
+      margin: 20px 0; padding: 10px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px;
+      display: flex; flex-direction: column;
     }
     #messages {
-      flex:1; overflow-y:auto; max-height:200px;
-      margin-bottom:10px;
+      flex: 1;
+      overflow-y: auto;
+      max-height: 200px;
+      margin-bottom: 10px;
     }
-    .msg { margin:4px 0; }
-    .user { text-align:right; color:#8be9fd; }
-    .bot  { text-align:left; color:#50fa7b; }
-    .bot.error { color:#ff5555; }
-    #controls { display:flex; gap:8px; }
+    .msg { margin: 4px 0; }
+    .user { text-align: right; color: #8be9fd; }
+    .bot  { text-align: left;  color: #50fa7b; }
+    .bot.error { color: #ff5555; }
+    #controls { display: flex; gap: 8px; }
     #text-input {
-      flex:1; padding:6px; font-size:1em;
-      border-radius:4px; border:1px solid #555;
-      background:#333; color:#eee;
+      flex: 1;
+      padding: 6px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #333;
+      color: #eee;
     }
     #send-btn, #record-btn {
-      padding:6px 12px; font-size:1em;
-      border:none; border-radius:4px;
-      background:#6272a4; color:#fff; cursor:pointer;
+      padding: 6px 12px;
+      font-size: 1em;
+      border: none;
+      border-radius: 4px;
+      background: #6272a4;
+      color: #fff;
+      cursor: pointer;
     }
-    #record-btn.recording { background:#ff5555; }
+    #record-btn.recording { background: #ff5555; }
   </style>
 </head>
 <body>
@@ -110,24 +140,24 @@
     <div id="messages"></div>
     <div id="controls">
       <button id="record-btn">🎤</button>
-      <input id="text-input" placeholder="Type message…" />
+      <input  id="text-input" placeholder="Type message…" />
       <button id="send-btn">Send</button>
     </div>
   </div>
 
   <script>
-  // —— 从 config.js 读取 Key —— 
+  // —— 1. 读取 Key —— 
   const OPENAI_API_KEY = window.OPENAI_API_KEY;
 
-  // —— 卡牌渲染逻辑 —— 
-  function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
-  function genParams(){ return {heart:randomInt(60,100),touch:randomInt(0,50),sound:randomInt(0,120)}; }
-  function toBit(v,t){ return v>t?'1':'0'; }
-  function categorize(p){ return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0'; }
+  // —— 2. 宠物卡牌逻辑 —— 
+  function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+  function genParams(){return{heart:randomInt(60,100),touch:randomInt(0,50),sound:randomInt(0,120)};}
+  function toBit(v,t){return v>t?'1':'0';}
+  function categorize(p){return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';}
   function getRarityText(code){
     const cnt = [...code].filter(c=>c==='1').length;
-    const letMap = ['D','C','B','A','S'][cnt];
-    return 'Rarity: ' + letMap;
+    const letter = ['D','C','B','A','S'][cnt];
+    return 'Rarity: '+letter;
   }
   const PET_MAP = {
     "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4",     name:"Gentle Jelly",    desc:"Floating calmly."},
@@ -149,39 +179,31 @@
   };
 
   function renderCard(){
-    const p = genParams();
-    const code = categorize(p);
-    const pet  = PET_MAP[code];
-    // 填参数
+    const p = genParams(), code = categorize(p), pet = PET_MAP[code];
+    // 填 UI
     document.getElementById('heart').textContent   = p.heart;
     document.getElementById('touch').textContent   = p.touch;
     document.getElementById('sound').textContent   = p.sound;
-    // 填名称/稀有度/简介
     document.getElementById('pet-name').textContent   = pet.name;
     document.getElementById('pet-rarity').textContent = getRarityText(code);
     document.getElementById('pet-desc').textContent   = pet.desc;
 
-    // 加载视频 —— 用 HTML 属性确保兼容
-    const container = document.getElementById('media-container');
-    container.innerHTML = '';
+    // 加载视频并立即播放
+    const c = document.getElementById('media-container');
+    c.innerHTML = '';
     const v = document.createElement('video');
-    v.setAttribute('src', pet.src);
-    v.setAttribute('autoplay', '');
-    v.setAttribute('muted', '');
-    v.setAttribute('loop', '');
-    v.setAttribute('playsinline', '');
-    v.setAttribute('preload', 'auto');
-    // 先 load，再用户触摸时 play
-    v.load();
-    v.addEventListener('loadedmetadata', ()=>{
-      // 某些 iOS/Android 仍然需要用户手势
-      container.addEventListener('click', ()=> v.play(), { once:true });
-    });
-    container.appendChild(v);
+    v.src         = pet.src;
+    v.autoplay    = true;
+    v.muted       = true;
+    v.loop        = true;
+    v.playsInline = true;
+    v.preload     = 'auto';
+    c.appendChild(v);
+    v.play().catch(_=>{ /* 某些 Browser 仍需首次点击 */ });
   }
   renderCard();
 
-  // —— 聊天逻辑 —— 
+  // —— 3. 聊天逻辑 —— 
   const messagesDiv = document.getElementById('messages');
   let history = [{role:'system',content:'You are a friendly alien pet.'}];
   function appendMsg(txt, cls){
@@ -195,14 +217,14 @@
     appendMsg(text,'user');
     history.push({role:'user',content:text});
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions',{
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method:'POST',
         headers:{
           'Content-Type':'application/json',
           'Authorization':'Bearer '+OPENAI_API_KEY
         },
         body: JSON.stringify({
-          model:'gpt-4o',
+          model: 'gpt-4o',
           messages: history
         })
       });
@@ -218,9 +240,9 @@
       history.push({role:'assistant',content:reply});
       appendMsg(reply,'bot');
       // 文字转语音
-      const utt = new SpeechSynthesisUtterance(reply);
-      utt.lang = 'en-US';
-      speechSynthesis.speak(utt);
+      const u = new SpeechSynthesisUtterance(reply);
+      u.lang='en-US';
+      speechSynthesis.speak(u);
     } catch(e){
       console.error(e);
       appendMsg('[Network Error]','bot error');
@@ -228,13 +250,13 @@
   }
   document.getElementById('send-btn').onclick = ()=>{
     const inp = document.getElementById('text-input');
-    const txt = inp.value.trim();
-    if(!txt) return;
+    const t = inp.value.trim();
+    if(!t) return;
     inp.value = '';
-    sendChat(txt);
+    sendChat(t);
   };
 
-  // —— Whisper 录音转文字 —— 
+  // —— 4. Whisper 录音转文字 —— 
   let recorder, chunks = [];
   const rb = document.getElementById('record-btn');
   rb.onclick = async ()=>{
@@ -247,12 +269,12 @@
       chunks = [];
       recorder.ondataavailable = e=>chunks.push(e.data);
       recorder.onstop = async ()=>{
-        const blob = new Blob(chunks,{ type:'audio/webm' });
+        const blob = new Blob(chunks,{type:'audio/webm'});
         const form = new FormData();
         form.append('file', blob, 'voice.webm');
         form.append('model','whisper-1');
         try {
-          const r = await fetch('https://api.openai.com/v1/audio/transcriptions',{
+          const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
             method:'POST',
             headers:{ Authorization:'Bearer '+OPENAI_API_KEY },
             body: form
