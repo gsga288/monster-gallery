@@ -53,7 +53,6 @@
       width:100%; height:100%;
       object-fit:cover;
     }
-    /* 孵化按钮，绝对居中 */
     #hatch-btn {
       position:absolute;
       top:50%; left:50%;
@@ -143,71 +142,59 @@
       const cnt = [...code].filter(x=>x==='1').length;
       return ['D','C','B','A','S'][cnt];
     }
-    
-    // 修复视频路径，使用实际存在的文件
-      const PET_MAP = {
-      "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4",     name:"Gentle Jelly",    desc:"Floating calmly."},
-      "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",      name:"Cuddly Whale",    desc:"Purring softly."},
-      "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",      name:"Alert Jelly",     desc:"Relaxed but watchful."},
-      "0011":{src:"media/calm_friendly_alert_loving/b.mp4",       name:"Watchful Whale",  desc:"Seeks company."},
-      "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",    name:"Reserved Jelly",  desc:"Keeps distance."},
-      "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4",     name:"Hesitant Heart",  desc:"Tentative trust."},
-      "0110":{src:"media/calm_reserved_alert_cautious/b.mp4",     name:"Guarded Jelly",   desc:"Vigilant calm."},
-      "0111":{src:"media/calm_reserved_alert_loving/b.mp4",       name:"Torn Tide",       desc:"Caution + love."},
-      "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",    desc:"Energetic bounce."},
-      "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4",  name:"Glowing Gem",     desc:"Radiant fondness."},
-      "1010":{src:"media/excited_friendly_alert_cautious/b.mp4",  name:"Brave Guardian",  desc:"Excited protector."},
-      "1011":{src:"media/excited_friendly_alert_loving/b.mp4",    name:"Fiery Embrace",   desc:"Passion + vigilance."},
-      "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly",   desc:"Vibrant distance."},
-      "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",       desc:"Quiet affection."},
-      "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",  desc:"Controlled blaze."},
-      "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",   desc:"Love & vigilance."}
+
+    const PET_MAP = {
+      "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4", name:"Gentle Jelly", desc:"Floating calmly."},
+      "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",  name:"Cuddly Whale", desc:"Purring softly."},
+      "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",  name:"Alert Jelly",  desc:"Relaxed but watchful."},
+      "0011":{src:"media/calm_friendly_alert_loving/b.mp4",   name:"Watchful Whale",desc:"Seeks company."},
+      "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",name:"Reserved Jelly",desc:"Keeps distance."},
+      "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4", name:"Hesitant Heart",desc:"Tentative trust."},
+      "0110":{src:"media/calm_reserved_alert_cautious/b.mp4", name:"Guarded Jelly", desc:"Vigilant calm."},
+      "0111":{src:"media/calm_reserved_alert_loving/b.mp4",   name:"Torn Tide",    desc:"Caution + love."},
+      "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",desc:"Energetic bounce."},
+      "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4",  name:"Glowing Gem", desc:"Radiant fondness."},
+      "1010":{src:"media/excited_friendly_alert_cautious/b.mp4",  name:"Brave Guardian",desc:"Excited protector."},
+      "1011":{src:"media/excited_friendly_alert_loving/b.mp4",    name:"Fiery Embrace",desc:"Passion + vigilance."},
+      "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly",desc:"Vibrant distance."},
+      "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",    desc:"Quiet affection."},
+      "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",desc:"Controlled blaze."},
+      "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",desc:"Love & vigilance."}
     };
 
     let currentVideo;
     function renderCard(){
-      const p = genParams(), code = categorize(p), pet = PET_MAP[code];
+      const p = genParams(),
+            code = categorize(p),
+            pet = PET_MAP[code];
+
       document.getElementById('heart').textContent = p.heart;
       document.getElementById('touch').textContent = p.touch;
       document.getElementById('sound').textContent = p.sound;
-      document.getElementById('pet-name').textContent   = pet.name;
+      document.getElementById('pet-name').textContent = pet.name;
       document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
-      document.getElementById('pet-desc').textContent   = pet.desc;
-      
+      document.getElementById('pet-desc').textContent = pet.desc;
+
       const ctr = document.getElementById('media-container');
       ctr.innerHTML = `<button id="hatch-btn">Hatch</button>`;
-      
-      // 预加载视频
+
+      // —— 预加载视频 —— 
       currentVideo = document.createElement('video');
-      currentVideo.src         = pet.src;
+      currentVideo.src         = '/' + pet.src;  // 绝对路径
       currentVideo.loop        = true;
       currentVideo.playsInline = true;
       currentVideo.muted       = true;
       currentVideo.preload     = 'auto';
-      currentVideo.controls    = false;
-      
-      // 添加错误处理
-      currentVideo.onerror = function() {
-        console.error('Video failed to load:', pet.src);
-        ctr.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Video not found</div>';
+
+      currentVideo.onerror = ()=> {
+        ctr.innerHTML = '<div style="color:red;text-align:center;padding:20px;">Video not found</div>';
       };
-      
-      // 添加加载成功处理
-      currentVideo.onloadeddata = function() {
-        console.log('Video loaded successfully:', pet.src);
+
+      ctr.querySelector('#hatch-btn').onclick = ()=>{
+        ctr.innerHTML = '';
+        ctr.appendChild(currentVideo);
+        currentVideo.play().catch(()=>{});
       };
-      
-      const hatchBtn = ctr.querySelector('#hatch-btn');
-      if (hatchBtn) {
-        hatchBtn.onclick = ()=>{
-          ctr.innerHTML = '';
-          ctr.appendChild(currentVideo);
-          currentVideo.play().catch(err => {
-            console.error('Video play failed:', err);
-            appendMsg('Video playback failed', 'bot error');
-          });
-        };
-      }
     }
     renderCard();
 
@@ -227,111 +214,64 @@
       appendMsg(text,'user');
       history.push({role:'user',content:text});
       try {
-        const res = await fetch('/api/chat', {
+        const res = await fetch('/api/chat',{
           method:'POST',
           headers:{ 'Content-Type':'application/json' },
           body: JSON.stringify({ messages: history })
         });
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const j = await res.json();
-        const reply = j.choices && j.choices[0] && j.choices[0].message 
-          ? j.choices[0].message.content 
-          : 'No response received';
+        const reply = j.choices?.[0]?.message.content || 'No response';
         history.push({role:'assistant',content:reply});
         appendMsg(reply,'bot');
-        
-        // 语音合成
-        if ('speechSynthesis' in window) {
+        if ('speechSynthesis' in window){
           const u = new SpeechSynthesisUtterance(reply);
           u.lang = 'en-US';
           speechSynthesis.speak(u);
         }
-      } catch (e) {
-        console.error('Chat error:', e);
-        appendMsg(`[Network Error: ${e.message}]`,'bot error');
+      } catch (e){
+        console.error(e);
+        appendMsg('[Network Error]','bot error');
       }
     }
 
-    // 发送按钮事件
-    const sendBtn = document.getElementById('send-btn');
-    const textInput = document.getElementById('text-input');
-    
-    if (sendBtn) {
-      sendBtn.addEventListener('click', ()=>{
-        const t = textInput.value.trim();
-        if (!t) return;
-        textInput.value = '';
-        sendChat(t);
-      });
-    }
+    document.getElementById('send-btn').addEventListener('click', ()=>{
+      const inp = document.getElementById('text-input'),
+            t = inp.value.trim();
+      if (!t) return;
+      inp.value = '';
+      sendChat(t);
+    });
 
-    // 回车发送
-    if (textInput) {
-      textInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          const t = textInput.value.trim();
-          if (!t) return;
-          textInput.value = '';
-          sendChat(t);
-        }
-      });
-    }
-
-    // 录音功能
+    // 录音转写
     let recorder, chunks = [];
-    const recordBtn = document.getElementById('record-btn');
-    
-    if (recordBtn) {
-      recordBtn.addEventListener('click', async function(){
-        if (recorder && recorder.state==='recording') {
-          recorder.stop();
-          this.classList.remove('recording');
-          this.textContent = '🎤';
-        } else {
+    document.getElementById('record-btn').addEventListener('click', async function(){
+      if (recorder?.state==='recording'){
+        recorder.stop();
+        this.classList.remove('recording');
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        recorder = new MediaRecorder(stream);
+        chunks = [];
+        recorder.ondataavailable = e=>chunks.push(e.data);
+        recorder.onstop = async ()=>{
+          const blob = new Blob(chunks,{type:'audio/webm'});
+          const form = new FormData();
+          form.append('file', blob, 'voice.webm');
+          form.append('model','whisper-1');
           try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-            recorder = new MediaRecorder(stream);
-            chunks = [];
-            
-            recorder.ondataavailable = e => chunks.push(e.data);
-            recorder.onstop = async () => {
-              const blob = new Blob(chunks, {type:'audio/webm'});
-              const form = new FormData();
-              form.append('file', blob, 'voice.webm');
-              form.append('model','whisper-1');
-              
-              try {
-                const r = await fetch('/api/transcribe', {
-                  method:'POST',
-                  body: form
-                });
-                if (!r.ok) {
-                  throw new Error(`HTTP ${r.status}`);
-                }
-                const j = await r.json();
-                if (j.text) {
-                  sendChat(j.text);
-                } else {
-                  appendMsg('[No speech detected]','bot error');
-                }
-              } catch(err){
-                console.error('Transcription error:', err);
-                appendMsg(`[Whisper Error: ${err.message}]`,'bot error');
-              }
-            };
-            
-            recorder.start();
-            this.classList.add('recording');
-            this.textContent = '⏹️';
-          } catch(err) {
-            console.error('Microphone access error:', err);
-            appendMsg('[Microphone access denied]','bot error');
+            const r = await fetch('/api/chat',{ method:'POST', body: form });
+            const j = await r.json();
+            if (j.text) sendChat(j.text);
+          } catch(err){
+            console.error(err);
+            appendMsg('[Whisper Error]','bot error');
           }
-        }
-      });
-    }
+        };
+        recorder.start();
+        this.classList.add('recording');
+      }
+    });
 
   });
   </script>
