@@ -3,19 +3,19 @@ import fetch from 'node-fetch';
 import { IncomingForm } from 'formidable';
 import fs from 'fs/promises';
 
-// 禁用内置 body 解析，让 formidable 来处理 multipart
+// Next.js 风格：禁用内置 bodyParser，让 formidable 处理 multipart
 export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
-  if (req.method === 'POST' && req.headers['content-type']?.startsWith('multipart/')) {
-    // —— Whisper 转写接口 —— 
+  if (req.method === 'POST' && req.headers['content-type']?.includes('multipart/')) {
+    // —— Whisper 转写 —— 
     const form = new IncomingForm();
     form.parse(req, async (err, fields, files) => {
       if (err) return res.status(500).json({ error: err.message });
       const f = files.file;
-      const buffer = await fs.readFile(f.filepath);
+      const buf = await fs.readFile(f.filepath);
       const body = new FormData();
-      body.append('file', buffer, 'voice.webm');
+      body.append('file', buf, 'voice.webm');
       body.append('model', 'whisper-1');
 
       const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -29,22 +29,20 @@ export default async function handler(req, res) {
 
   } else if (req.method === 'POST') {
     // —— Chat Completions —— 
-    const payload = await new Promise(r => {
-      let buf = '';
-      req.on('data', d=> buf += d);
-      req.on('end', ()=> r(JSON.parse(buf)));
-    });
+    let payload = '';
+    for await (const chunk of req) payload += chunk;
+    payload = JSON.parse(payload);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type':'application/json',
+        'Content-Type':  'application/json',
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify(payload)
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+    const j = await r.json();
+    res.status(r.status).json(j);
 
   } else {
     res.setHeader('Allow', 'POST');
