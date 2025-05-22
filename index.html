@@ -54,11 +54,25 @@
       width:100%; height:100%;
       object-fit:cover;
     }
+    /* 孵化按钮，绝对居中 */
+    #hatch-btn {
+      position:absolute;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      z-index:10;
+      padding:8px 16px;
+      background:rgba(255,255,255,0.9);
+      color:#111;
+      border:none;
+      border-radius:4px;
+      font-size:1em;
+      cursor:pointer;
+    }
+
     .pet-desc {
       padding:12px; background:#222;
       font-size:0.95em; line-height:1.4;
     }
-
     /* ---------- 聊天区 ---------- */
     #chat {
       width:80vw; max-width:500px;
@@ -102,7 +116,10 @@
       <div>✋ Touch:      <span id="touch">—</span></div>
       <div>🔊 Sound Lvl: <span id="sound">—</span></div>
     </div>
-    <div id="media-container"></div>
+    <div id="media-container">
+      <!-- 孵化按钮 -->
+      <button id="hatch-btn">Hatch</button>
+    </div>
     <div class="pet-desc" id="pet-desc">—</div>
   </div>
 
@@ -117,12 +134,11 @@
   </div>
 
   <script>
-  // 等 DOM 都准备好再跑
   document.addEventListener('DOMContentLoaded', ()=>{
 
     /*** 一、宠物卡牌逻辑 ***/
     function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-    function genParams(){return{heart:randomInt(60,100),touch:randomInt(0,50),sound:randomInt(0,120)};}
+    function genParams(){return {heart:randomInt(60,100), touch:randomInt(0,50), sound:randomInt(0,120)};}
     function toBit(v,t){return v>t?'1':'0';}
     function categorize(p){return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';}
     function getRarity(code){
@@ -148,31 +164,32 @@
       "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",   desc:"Love & vigilance."}
     };
 
+    let currentVideo;
     function renderCard(){
       const p = genParams(), code = categorize(p), pet = PET_MAP[code];
-      // 数字
-      document.getElementById('heart').textContent   = p.heart;
-      document.getElementById('touch').textContent   = p.touch;
-      document.getElementById('sound').textContent   = p.sound;
-      // 文本
+      // 填数字
+      document.getElementById('heart').textContent = p.heart;
+      document.getElementById('touch').textContent = p.touch;
+      document.getElementById('sound').textContent = p.sound;
+      // 填文字
       document.getElementById('pet-name').textContent   = pet.name;
       document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
       document.getElementById('pet-desc').textContent   = pet.desc;
-      // 视频
+      // 准备视频但不自动播放
       const ctr = document.getElementById('media-container');
-      ctr.innerHTML = '';
-      const v = document.createElement('video');
-      v.src          = pet.src;
-      v.autoplay     = true;
-      v.muted        = true;      // 视频本身静音，确保自动播放
-      v.loop         = true;
-      v.playsInline  = true;
-      v.preload      = 'auto';
-      ctr.appendChild(v);
-      // 尝试自动播放；若被阻止，绑定用户第一次点击
-      v.play().catch(()=> {
-        ctr.addEventListener('click', ()=> v.play(), { once:true });
-      });
+      ctr.innerHTML = `<button id="hatch-btn">Hatch</button>`;
+      currentVideo = document.createElement('video');
+      currentVideo.src         = pet.src;
+      currentVideo.loop        = true;
+      currentVideo.playsInline = true;
+      currentVideo.muted       = true;
+      currentVideo.preload     = 'auto';
+      // 点击孵化后加载并播放
+      ctr.querySelector('#hatch-btn').onclick = ()=>{
+        ctr.innerHTML = '';
+        ctr.appendChild(currentVideo);
+        currentVideo.play().catch(()=>{ /* 若被阻止，用户手动点击视频 */ });
+      };
     }
     renderCard();
 
@@ -191,7 +208,6 @@
     async function sendChat(text){
       appendMsg(text,'user');
       history.push({role:'user',content:text});
-
       try {
         const res = await fetch('/api/chat', {
           method:'POST',
@@ -199,74 +215,63 @@
           body: JSON.stringify({ messages: history })
         });
         if (!res.ok) {
-          const code = res.status;
-          appendMsg(code===401
-            ? 'Error 401: Unauthorized'
-            : `Error ${code}`, 'bot error');
+          appendMsg(`Error ${res.status}`,'bot error');
           return;
         }
         const j = await res.json();
         const reply = j.choices[0].message.content;
         history.push({role:'assistant',content:reply});
         appendMsg(reply,'bot');
-        // 文字转语音
+        // TTS
         const u = new SpeechSynthesisUtterance(reply);
         u.lang = 'en-US';
         speechSynthesis.speak(u);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error(e);
         appendMsg('[Network Error]','bot error');
       }
     }
 
-    document.getElementById('send-btn')
-      .addEventListener('click', ()=>{
-        const inp = document.getElementById('text-input');
-        const t = inp.value.trim();
-        if (!t) return;
-        inp.value = '';
-        sendChat(t);
-      });
+    document.getElementById('send-btn').addEventListener('click', ()=>{
+      const inp = document.getElementById('text-input');
+      const t = inp.value.trim();
+      if (!t) return;
+      inp.value = '';
+      sendChat(t);
+    });
 
-    // Whisper 录音 → 文本
+    // 录音转写，FormData 不指定 Content-Type
     let recorder, chunks = [];
-    document.getElementById('record-btn')
-      .addEventListener('click', async function(){
-        if (recorder && recorder.state==='recording') {
-          recorder.stop();
-          this.classList.remove('recording');
-        } else {
-          const s = await navigator.mediaDevices.getUserMedia({audio:true});
-          recorder = new MediaRecorder(s);
-          chunks = [];
-          recorder.ondataavailable = e=>chunks.push(e.data);
-          recorder.onstop = async ()=>{
-            const blob = new Blob(chunks,{type:'audio/webm'});
-            const form = new FormData();
-            form.append('file', blob, 'voice.webm');
-            form.append('model','whisper-1');
-            try {
-              const r = await fetch('/api/chat', {
-                method:'POST',
-                headers:{ 'Content-Type':'application/json' },
-                body: JSON.stringify({
-                  // OpenAI Whisper 接口和 Chat 接口共用同一个 proxy 路由
-                  // 后端看 file 字段自动切换到 transcription
-                  file: blob,
-                  model: 'whisper-1'
-                })
-              });
-              const j = await r.json();
-              if (j.text) sendChat(j.text);
-            } catch(e) {
-              console.error(e);
-              appendMsg('[Whisper Error]','bot error');
-            }
-          };
-          recorder.start();
-          this.classList.add('recording');
-        }
-      });
+    document.getElementById('record-btn').addEventListener('click', async function(){
+      if (recorder && recorder.state==='recording') {
+        recorder.stop();
+        this.classList.remove('recording');
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        recorder = new MediaRecorder(stream);
+        chunks = [];
+        recorder.ondataavailable = e=>chunks.push(e.data);
+        recorder.onstop = async ()=>{
+          const blob = new Blob(chunks,{type:'audio/webm'});
+          const form = new FormData();
+          form.append('file', blob, 'voice.webm');
+          form.append('model','whisper-1');
+          try {
+            const r = await fetch('/api/chat', {
+              method:'POST',
+              body: form
+            });
+            const j = await r.json();
+            if (j.text) sendChat(j.text);
+          } catch(err){
+            console.error(err);
+            appendMsg('[Whisper Error]','bot error');
+          }
+        };
+        recorder.start();
+        this.classList.add('recording');
+      }
+    });
 
   }); // DOMContentLoaded
   </script>
