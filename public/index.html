@@ -1,448 +1,303 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pet Card & Voice Chat</title>
-  <style>
-    /* ---------- 全局 & 布局 ---------- */
-    body, html {
-      margin:0; padding:0;
-      background: url('wonderland.png') no-repeat center center fixed;
-      background-size: cover;
-      font-family: sans-serif; color: #eee;
-      display: flex; flex-direction: column;
-      align-items: center; min-height: 100vh;
-    }
-    /* ---------- 卡牌样式 ---------- */
-    .card {
-      width: 80vw; max-width: 500px;
-      background: rgba(34,34,34,0.9);
-      border: 2px solid #444; border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.6);
-      overflow: hidden;
-      display: flex; flex-direction: column;
-      margin-top: 20px;
-    }
-    .card-header {
-      display:flex; justify-content:space-between;
-      padding:8px 12px; background:#333;
-      border-bottom:1px solid #444;
-    }
-    .pet-name { font-size:1.2em; font-weight:bold; }
-    .pet-rarity {
-      font-size:1.2em; padding:2px 6px;
-      background: gold; color:#111;
-      border-radius:4px;
-    }
-    .card-params {
-      padding:8px 12px; background:#2a2a2a;
-      border-bottom:1px solid #444;
-      display:flex; justify-content:space-around;
-      font-size:0.95em;
-    }
-    .card-params div { display:flex; align-items:center; gap:4px; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pet Card & Voice Chat</title>
 
-    /* ---------- 视频区（16:9） ---------- */
-    #media-container {
-      width:100%; padding-bottom:56.25%; /* 16:9 */
-      position:relative; background:#000;
-    }
-    #media-container video {
-      position:absolute; top:0; left:0;
-      width:100%; height:100%;
-      object-fit:cover;
-    }
-    #hatch-btn {
-      position:absolute;
-      top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      z-index:10;
-      padding:8px 16px;
-      background:rgba(255,255,255,0.9);
-      color:#111;
-      border:none; border-radius:4px;
-      font-size:1em; cursor:pointer;
-    }
+<!-----------  basic CSS  ----------->
+<style>
+/* 全局背景 */
+html,body{
+  margin:0;padding:0;
+  background:url("wonderland.png") no-repeat center/cover fixed;
+  font-family:sans-serif;color:#eee;
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;
+}
 
-    .pet-desc {
-      padding:12px; background:#222;
-      font-size:0.95em; line-height:1.4;
-    }
-    /* ---------- 聊天区 ---------- */
-    #chat {
-      width:80vw; max-width:500px;
-      background: rgba(0,0,0,0.6);
-      border-radius:8px; padding:10px;
-      display:flex; flex-direction:column;
-      margin:20px 0;
-    }
-    #messages {
-      flex:1; overflow-y:auto; max-height:200px;
-      margin-bottom:10px;
-    }
-    .msg { margin:4px 0; }
-    .user { text-align:right; color:#8be9fd; }
-    .bot  { text-align:left;  color:#50fa7b; }
-    .bot.error { color:#ff5555; }
-    #controls { display:flex; gap:8px; }
-    #text-input {
-      flex:1; padding:6px; font-size:1em;
-      border-radius:4px; border:1px solid #555;
-      background:#333; color:#eee;
-    }
-    button {
-      padding:6px 12px; font-size:1em;
-      border:none; border-radius:4px;
-      background:#6272a4; color:#fff; cursor:pointer;
-    }
-    #record-btn.recording { background:#ff5555; }
-  </style>
+/* 卡牌主体 */
+.card{
+  width:80vw;max-width:500px;margin-top:20px;
+  background:rgba(34,34,34,.9);border:2px solid #444;border-radius:8px;
+  box-shadow:0 0 10px rgba(0,0,0,.6);overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.card-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;background:#333;border-bottom:1px solid #444;
+}
+.pet-name{font-size:1.2em;font-weight:bold;}
+.pet-rarity{font-size:1.2em;padding:2px 6px;background:gold;color:#111;border-radius:4px;}
+
+.card-params{
+  padding:8px 12px;background:#2a2a2a;border-bottom:1px solid #444;
+  display:flex;justify-content:space-around;font-size:.95em;
+}
+.card-params div{display:flex;align-items:center;gap:4px;}
+
+/* 视频区域 16:9 占位 */
+#media-container{position:relative;background:#000;width:100%;padding-bottom:56.25%;}
+#media-container video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#hatch-btn{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:10;padding:8px 16px;font-size:1em;border:none;border-radius:4px;
+  background:rgba(255,255,255,.9);color:#111;cursor:pointer;
+}
+
+.pet-desc{padding:12px;background:#222;font-size:.95em;line-height:1.4;}
+
+/* 聊天面板 */
+#chat{width:80vw;max-width:500px;padding:10px;margin:20px 0;
+  background:rgba(0,0,0,.6);border-radius:8px;display:flex;flex-direction:column;}
+#messages{flex:1;overflow-y:auto;max-height:200px;margin-bottom:10px;}
+.msg{margin:4px 0;}
+.user{text-align:right;color:#8be9fd;}
+.bot{text-align:left;color:#50fa7b;}
+.bot.error{color:#ff5555;}
+
+#controls{display:flex;gap:8px;}
+#text-input{
+  flex:1;padding:6px;font-size:1em;border-radius:4px;border:1px solid #555;
+  background:#333;color:#eee;
+}
+button{
+  padding:6px 12px;font-size:1em;border:none;border-radius:4px;
+  background:#6272a4;color:#fff;cursor:pointer;
+}
+#record-btn.recording{background:#ff5555;}
+</style>
 </head>
+
 <body>
-
-  <!-- ===== 宠物卡牌 ===== -->
-  <div class="card">
-    <div class="card-header">
-      <div id="pet-name">—</div>
-      <div id="pet-rarity">—</div>
-    </div>
-    <div class="card-params">
-      <div>❤️ Heart Rate: <span id="heart">—</span></div>
-      <div>✋ Touch:      <span id="touch">—</span></div>
-      <div>🔊 Sound Lvl: <span id="sound">—</span></div>
-    </div>
-    <div id="media-container">
-      <button id="hatch-btn">Hatch</button>
-    </div>
-    <div class="pet-desc" id="pet-desc">—</div>
+<!-------------------- 卡牌 -------------------->
+<div class="card">
+  <div class="card-header">
+    <div class="pet-name" id="pet-name">—</div>
+    <div class="pet-rarity" id="pet-rarity">—</div>
   </div>
-
-  <!-- ===== 聊天区 ===== -->
-  <div id="chat">
-    <div id="messages"></div>
-    <div id="controls">
-      <button id="record-btn">🎤</button>
-      <input id="text-input" placeholder="Type message…"/>
-      <button id="send-btn">Send</button>
-    </div>
+  <div class="card-params">
+    <div>❤️ Heart Rate: <span id="heart">—</span></div>
+    <div>✋ Touch: <span id="touch">—</span></div>
+    <div>🔊 Sound Lvl: <span id="sound">—</span></div>
   </div>
+  <div id="media-container">
+    <button id="hatch-btn">Hatch</button>
+  </div>
+  <div class="pet-desc" id="pet-desc">—</div>
+</div>
 
-  <script>
-  document.addEventListener('DOMContentLoaded', ()=>{
+<!-------------------- 聊天 -------------------->
+<div id="chat">
+  <div id="messages"></div>
+  <div id="controls">
+    <button id="record-btn">🎤</button>
+    <input id="text-input" placeholder="Type message…">
+    <button id="send-btn">Send</button>
+  </div>
+</div>
 
-    /*** 语音合成准备 ***/
-    let voices = [];
-    speechSynthesis.onvoiceschanged = ()=> {
-      voices = speechSynthesis.getVoices();
-    };
+<!-------------------- 脚本 -------------------->
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
 
-    /*** 一、宠物卡牌逻辑 ***/
-    function randomInt(min,max){
-      return Math.floor(Math.random()*(max-min+1))+min;
-    }
-    function genParams(){
-      return { heart:randomInt(60,100), touch:randomInt(0,50), sound:randomInt(0,120) };
-    }
-    function toBit(v,t){ return v>t ? '1' : '0'; }
-    function categorize(p){
-      return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
-    }
-    function getRarity(code){
-      const cnt = [...code].filter(x=>x==='1').length;
-      return ['D','C','B','A','S'][cnt];
-    }
-const PET_MAP = {
-  "0000": {
-    src: "media/calm_reserved_relaxed_cautious/b.mp4",
-    name: "Needlecrest Sylph",
-    desc: `Grade A · Rare
+/* ---------- 语音合成（准备声线） ---------- */
+let voices=[];
+speechSynthesis.onvoiceschanged=()=>{ voices=speechSynthesis.getVoices(); };
+
+/* ---------- 小工具 ---------- */
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const toBit=(v,t)=>v>t?'1':'0';
+const genParams=()=>({heart:rnd(60,100),touch:rnd(0,50),sound:rnd(0,120)});
+const categorize=p=>toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
+const getRarity=c=>['D','C','B','A','S'][[...c].filter(x=>x==='1').length];
+
+/* ---------- 16 只宠物数据保持不变 ---------- */
+const PET_MAP={
+"0000":{src:"media/calm_reserved_relaxed_cautious/b.mp4",name:"Needlecrest Sylph",desc:`Grade A · Rare
 Appearance: A sleek, silvery-furred creature with a radiant crest of iridescent quills fanning down its back. Two curved, translucent horns arch gracefully from its head, and its large, violet-glowing eyes hold an ancient wisdom. Subtle bioluminescent markings trace along its limbs, pulsing softly like moonlight on water.
 Personality: Quietly observant and deeply empathetic, it drifts through shadows with graceful ease. Though naturally cautious, it forms steadfast bonds and offers gentle guidance through the faint rustle of its quills.
-Heart Rate: 78 bpm | Touch: 28 / 50 | Sound Level: 14 / 120 (Whisper-soft)`
-  },
-  "0001": {
-    src: "media/calm_friendly_relaxed_loving/b.mp4",
-    name: "Moonvale Fawn",
-    desc: `Grade B · Rare
+Heart Rate: 78 bpm | Touch: 28 / 50 | Sound Level: 14 / 120 (Whisper-soft)`},
+"0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",name:"Moonvale Fawn",desc:`Grade B · Rare
 Appearance: A plump, fawn-like creature cloaked in soft, pearlescent white fur that seems to glow under moonlight. Its long, velvety ears tilt forward in perpetual curiosity, and its eyes form a gentle, contented smile even when closed. Along its back sprouts a row of delicate, translucent leaf-shaped spines that shimmer like dewdrops at dawn.
 Personality: Calm and affectionate, it nuzzles into your hand and emits a soft, lullaby-like hum. Its presence brings a soothing tranquility, as if the hush of a starlit glade followed you home.
-Heart Rate: 62 bpm | Touch: 22 / 50 | Sound Level: 9 / 120 (Lullaby-soft)`
-  },
-  "0010": {
-    src: "media/excited_reserved_relaxed_cautious/b.mp4",
-    name: "Prismarine Sylph",
-    desc: `Grade A · Rare
+Heart Rate: 62 bpm | Touch: 22 / 50 | Sound Level: 9 / 120 (Lullaby-soft)`},
+"0010":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Prismarine Sylph",desc:`Grade A · Rare
 Appearance: A lithe, amphibious sprite with translucent, cerulean-blue skin that shimmers like moonlit water. Two crystalline horns sprout atop its head, facets catching every glint of light, and delicate, fin-like ears fan out behind its large, inky eyes. Its long, tapering tail trails behind in graceful undulations, dotted with bioluminescent speckles.
 Personality: Playfully curious and quick to bond, it flutters around with fluid, dance-like movements. Though shy at first, it becomes trusting and chatters aloud in gentle, tinkling calls when it feels at ease.
-Heart Rate: 88 bpm | Touch: 42 / 50 | Sound Level: 58 / 120 (Tinkling hum)`
-  },
-  "0011": {
-    src: "media/calm_reserved_relaxed_loving/b.mp4",
-    name: "Cottonplume Sprite",
-    desc: `Grade B · Rare
+Heart Rate: 88 bpm | Touch: 42 / 50 | Sound Level: 58 / 120 (Tinkling hum)`},
+"0011":{src:"media/calm_reserved_relaxed_loving/b.mp4",name:"Cottonplume Sprite",desc:`Grade B · Rare
 Appearance: A round, snow-white fluffball cloaked in downy feathers. Its tiny wings fold neatly at its sides, and a pair of soft, plume-like tufts sprout atop its head. Glossy onyx eyes peer out with innocent curiosity, and its beak is a delicate blush of pale pink.
 Personality: Serene and affectionate, it nestles into your palm with a gentle coo. Though shy at first, it soon relaxes into a warm, comforting presence, radiating a sense of calm.
-Heart Rate: 60 bpm | Touch: 30 / 50 | Sound Level: 15 / 120 (Quiet coo)`
-  },
-  "0100": {
-    src: "media/calm_friendly_relaxed_cautious/b.mp4",
-    name: "Glimmerwing Chick",
-    desc: `Grade B · Rare
+Heart Rate: 60 bpm | Touch: 30 / 50 | Sound Level: 15 / 120 (Quiet coo)`},
+"0100":{src:"media/calm_friendly_relaxed_cautious/b.mp4",name:"Glimmerwing Chick",desc:`Grade B · Rare
 Appearance: A petite, round-bodied chick swathed in plush, snow-white down. From either side of its head sprout two translucent, feather-like ears that glow warmly with golden light, casting a soft halo around its inquisitive onyx eyes. Its tiny beak is a pale blush, and its stubby wings fold snugly against its sides.
 Personality: Gentle and affectionate, it emits the faintest, coo-like peeps and nestles into your palm for comfort. Though shy at first, it soon relaxes and greets you with a soft, luminous flutter.
-Heart Rate: 64 bpm | Touch: 20 / 50 | Sound Level: 18 / 120 (Barely audible)`
-  },
-  "0101": {
-    src: "media/calm_reserved_relaxed_loving/b.mp4",
-    name: "Dewplume Sprig",
-    desc: `Grade B · Rare
+Heart Rate: 64 bpm | Touch: 20 / 50 | Sound Level: 18 / 120 (Barely audible)`},
+"0101":{src:"media/calm_reserved_relaxed_loving/b.mp4",name:"Dewplume Sprig",desc:`Grade B · Rare
 Appearance: A petite, round-bodied hatchling covered in downy, pale-rose feathers that glisten with tiny dew droplets. From its crown sprout three short, translucent quills tipped in pastel green, each beaded with morning moisture. It perches delicately on a leaf, its glossy onyx eyes reflecting the world in miniature.
 Personality: Shy and inquisitive, it peeks out from beneath its quill-crown at every rustle of breeze. Though timid at first, it warms to gentle coaxing—nuzzling into your palm with soft, cautious peeps.
-Heart Rate: 72 bpm | Touch: 18 / 50 | Sound Level: 80 / 120 (Barely a whisper)`
-  },
-  "0110": {
-    src: "media/excited_friendly_relaxed_cautious/b.mp4",
-    name: "Lumina Jelly",
-    desc: `Grade A · Rare
+Heart Rate: 72 bpm | Touch: 18 / 50 | Sound Level: 80 / 120 (Barely a whisper)`},
+"0110":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Lumina Jelly",desc:`Grade A · Rare
 Appearance: A translucent, umbrella-shaped bell of pale aquamarine, within which fine, filamentous tendrils float like liquid starlight. Each strand glows softly with bioluminescent ripples, and the bell’s edge drips in delicate, wave-like fringes that drift with graceful ease.
 Personality: Serene and meditative, it drifts in gentle pulses of light—responding to your presence with soft, rhythmic glows. Its tranquil aura calms the mind, offering a steady, soothing companionship.
-Heart Rate: 82 bpm | Touch: 10 / 50 (Barely perceptible) | Sound Level: 50 / 120 (Near silent)`
-  },
-  "0111": {
-    src: "media/excited_friendly_relaxed_loving/b.mp4",
-    name: "Little Ripple",
-    desc: `Grade B · Rare Water Spirit Hatchling
+Heart Rate: 82 bpm | Touch: 10 / 50 | Sound Level: 50 / 120 (Near silent)`},
+"0111":{src:"media/excited_friendly_relaxed_loving/b.mp4",name:"Little Ripple",desc:`Grade B · Rare Water Spirit Hatchling
 The owner’s heart rate is a calm 82 bpm, voice as low as 35 dB, with a warm palm gently resting on its shell. It slides forth in the form of a crystal-clear blue droplet, tiny bubbles and halos drifting around its body. Gentle and soothing in temperament, it loves to cling to your palm, quietly keeping you company.
-Touch: 24 / 50`
-  },
-  "1000": {
-    src: "media/excited_reserved_relaxed_loving/b.mp4",
-    name: "Blue Crystal Sprite",
-    desc: `Grade A
+Touch: 24 / 50`},
+"1000":{src:"media/excited_reserved_relaxed_loving/b.mp4",name:"Blue Crystal Sprite",desc:`Grade A
 It has a translucent sky-blue body, like an adorable smiling slime, with soft, oversized ears atop its head and an aquamarine diamond clasped in its hands—truly a guardian spirit from the depths of the aurora. Clever and alert, with a hint of competitiveness, it quietly watches over you at all times, ever ready to fight for your sake.
-Heart Rate: 98 bpm | Touch: 35 | Voice: 48 dB`
-  },
-  "1001": {
-    src: "media/excited_friendly_alert_loving/b.mp4",
-    name: "Flarekoko",
-    desc: `Grade A · Rare
+Heart Rate: 98 bpm | Touch: 35 | Voice: 48 dB`},
+"1001":{src:"media/excited_friendly_alert_loving/b.mp4",name:"Flarekoko",desc:`Grade A · Rare
 Appearance: A chubby little creature in fiery orange-red, patterned with flickering flames. Its large eyes glow like fireballs, and it rides atop tiny blazing wheels, steam rising around it.
 Personality: Hot-tempered and outgoing—at the slightest loud noise, it springs into the air.
 Special Trait: The more intense the interaction, the more exhilarated it becomes; the higher its heart rate climbs, the fiercer its tail blazes.
-Heart Rate: 100 bpm | Touch: 24 | Voice: 100 dB`
-  },
-  "1010": {
-    src: "media/calm_friendly_alert_loving/b.mp4",
-    name: "Star Whisper · Lunilith",
-    desc: `Rarity: S (Unique)
-Heart Rate: 62 bpm | Touch: 12 / 50 | Sound Level: 81 / 120
+Heart Rate: 100 bpm | Touch: 24 | Voice: 100 dB`},
+"1010":{src:"media/calm_friendly_alert_loving/b.mp4",name:"Star Whisper · Lunilith",desc:`Rarity: S (Unique)
+Heart Rate: 62 bpm | Touch: 12 / 50 | Sound Level: 81 / 120
 It awakens in hushed stillness, draped in starlight, with the galaxy reflected in its eyes. It silently watches over the most tender corners of your heart.
-Gentle and synesthetic in nature—like the moon, it never clamors yet remains ever by your side.`
-  },
-  "1011": {
-    src: "media/excited_reserved_relaxed_loving/b.mp4",
-    name: "Shadow Glimmer",
-    desc: `Grade A · Rare
+Gentle and synesthetic in nature—like the moon, it never clamors yet remains ever by your side.`},
+"1011":{src:"media/excited_reserved_relaxed_loving/b.mp4",name:"Shadow Glimmer",desc:`Grade A · Rare
 Appearance: A pitch-black, semi-transparent sphere with faint starlight flowing within. Its ears resemble bat wings, gently flapping to keep it afloat.
 Personality: Quiet and sensitive, it loves to silently accompany you in the darkness, its soft whispers brimming with tenderness.
-Heart Rate: 81 bpm | Touch: 32 | Voice: 18 dB`
-  },
-  "1100": {
-    src: "media/excited_reserved_relaxed_cautious/b.mp4",
-    name: "Nebulight Nymph",
-    desc: `Grade A · Rare
+Heart Rate: 81 bpm | Touch: 32 | Voice: 18 dB`},
+"1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Nebulight Nymph",desc:`Grade A · Rare
 Appearance: A slender, mouse-like sprite cloaked in a soft, mint-green glow speckled with star-like flecks. Its oversized, translucent ears shimmer with shifting aurora hues, and two delicate, iridescent wings sprout from its shoulders, framed by a faint halo of light. Its large, amethyst-flecked eyes reflect swirling galaxies within.
 Personality: Curious and gentle, it drifts in graceful arcs around you, ever observant. Though shy at first, it quickly warms to kind hands, greeting you with soft, musical trills.
-Heart Rate: 60 bpm | Touch: 38 / 50 | Sound Level: 90 / 120`
-  },
-  "1101": {
-    src: "media/excited_reserved_alert_cautious/b.mp4",
-    name: "Pyrodra the Blazing Beast",
-    desc: `Rarity: A (Extremely Rare)
+Heart Rate: 60 bpm | Touch: 38 / 50 | Sound Level: 90 / 120`},
+"1101":{src:"media/excited_reserved_alert_cautious/b.mp4",name:"Pyrodra the Blazing Beast",desc:`Rarity: A (Extremely Rare)
 Heart Rate: 105 bpm
 Touch: 45 / 50 (High-Frequency Interaction)
 Sound Level: 91 / 120 (Passionate Calls)
 Born from fervor, its flaming scales erupt like a tiny energy sphere!
-Impulsive and fiery by nature, always ready to dash into battle.`
-  },
-  "1110": {
-    src: "media/excited_friendly_alert_cautious/b.mp4",
-    name: "Bubbibi the Bouncebeast",
-    desc: `Grade C (Common)
+Impulsive and fiery by nature, always ready to dash into battle.`},
+"1110":{src:"media/excited_friendly_alert_cautious/b.mp4",name:"Bubbibi the Bouncebeast",desc:`Grade C (Common)
 Heart Rate: 88 bpm | Touch: 20 / 50 (Affectionate strokes) | Sound Level: 81 / 100
-It bounces into view and immediately starts showering you with affection—soft and squishy like bubblegum, its laughter bubbling with a joyful gurgle. Clingy and vivacious by nature, it loves to scamper ahead while glancing back to see if you’re keeping up.`
-  },
-  "1111": {
-    src: "media/calm_reserved_alert_loving/b.mp4",
-    name: "Rose Pumpling",
-    desc: `Appearance: A plump, pumpkin-shaped sprite in translucent rose-pink, its body gently ribbed like a miniature gourd. A slender brown stem with two soft green leaves sprouts atop its head, and its large, gem-bright eyes sparkle with curious warmth as it hovers.
+It bounces into view and immediately starts showering you with affection—soft and squishy like bubblegum, its laughter bubbling with a joyful gurgle. Clingy and vivacious by nature, it loves to scamper ahead while glancing back to see if you’re keeping up.`},
+"1111":{src:"media/calm_reserved_alert_loving/b.mp4",name:"Rose Pumpling",desc:`Appearance: A plump, pumpkin-shaped sprite in translucent rose-pink, its body gently ribbed like a miniature gourd. A slender brown stem with two soft green leaves sprouts atop its head, and its large, gem-bright eyes sparkle with curious warmth as it hovers.
 Personality: Sweet-natured and affectionate, it glows softly when touched and nuzzles into your palm, offering quiet companionship. Its gentle coos bring a soothing calm.
-Heart Rate: 65 bpm | Touch: 26 / 50 | Sound Level: 108 / 120`
-  }
+Heart Rate: 65 bpm | Touch: 26 / 50 | Sound Level: 108 / 120`}
 };
 
-    let currentVideo;
-    function renderCard(){
-      const p = genParams(), code = categorize(p), pet = PET_MAP[code];
-      document.getElementById('heart').textContent = p.heart;
-      document.getElementById('touch').textContent = p.touch;
-      document.getElementById('sound').textContent = p.sound;
-      document.getElementById('pet-name').textContent   = pet.name;
-      document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
-      document.getElementById('pet-desc').textContent   = pet.desc;
+/* ---------- DOM 引用 ---------- */
+const elHeart=document.getElementById('heart');
+const elTouch=document.getElementById('touch');
+const elSound=document.getElementById('sound');
+const elName =document.getElementById('pet-name');
+const elRarity=document.getElementById('pet-rarity');
+const elDesc  =document.getElementById('pet-desc');
+const mediaBox=document.getElementById('media-container');
+const hatchBtn=document.getElementById('hatch-btn');
 
-      const ctr = document.getElementById('media-container');
-      ctr.innerHTML = `<button id="hatch-btn">Hatch</button>`;
+const msgBox =document.getElementById('messages');
+const textInp=document.getElementById('text-input');
+const sendBtn=document.getElementById('send-btn');
+const recBtn =document.getElementById('record-btn');
 
-      currentVideo = document.createElement('video');
-      currentVideo.src         = pet.src;
-      currentVideo.loop        = true;
-      currentVideo.playsInline = true;
-      currentVideo.muted       = true;
-      currentVideo.preload     = 'auto';
+/* ---------- 渲染卡牌、孵化 ---------- */
+let currentVideo;
+function newVideo(src){
+  const v=document.createElement('video');
+  v.src=src; v.loop=true; v.muted=true; v.preload='auto';
+  v.playsInline=true; v.setAttribute('playsinline','');
+  return v;
+}
+function renderCard(){
+  const p=genParams(), code=categorize(p), pet=PET_MAP[code];
+  elHeart.textContent=p.heart; elTouch.textContent=p.touch; elSound.textContent=p.sound;
+  elName.textContent=pet.name; elRarity.textContent=`Rarity: ${getRarity(code)}`;
+  elDesc.textContent=pet.desc;
 
-      ctr.querySelector('#hatch-btn').onclick = ()=>{
-        ctr.innerHTML = '';
-        ctr.appendChild(currentVideo);
-        currentVideo.play().catch(()=>{});
-        // 孵化后 3s 首次主动发言
-        scheduleAuto(3000);
-      };
-    }
-    renderCard();
+  mediaBox.innerHTML=''; mediaBox.appendChild(hatchBtn);
+  currentVideo=newVideo(pet.src);
+}
+renderCard();
 
-    /*** 二、聊天 & 自动发言 ***/
-    const msgs = document.getElementById('messages');
-    let history = [];
-    let isChatting = false;
-    let autoTimer = null;
+hatchBtn.onclick=()=>{
+  mediaBox.innerHTML=''; mediaBox.appendChild(currentVideo);
+  currentVideo.play().catch(()=>{});
+  scheduleAuto(3000);         // 首次 3 s
+};
 
-    function appendMsg(txt, cls){
-      const d = document.createElement('div');
-      d.className = `msg ${cls}`;
-      d.textContent = txt;
-      msgs.appendChild(d);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
+/* ---------- 聊天逻辑 ---------- */
+let history=[], isChatting=false, autoTimer=null;
 
-    async function doChatRequest(){
-      isChatting = true;
-      try {
-        const res = await fetch('/api/chat', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ messages: history })
-        });
-        if (!res.ok) {
-          appendMsg(`Error ${res.status}`,'bot error');
-          return;
-        }
-        const j = await res.json();
-        const reply = j.choices[0].message.content;
-        history.push({ role:'assistant', content: reply });
-        appendMsg(reply,'bot');
+function appendMsg(txt,cls){
+  const div=document.createElement('div');
+  div.className='msg '+cls; div.textContent=txt;
+  msgBox.appendChild(div); msgBox.scrollTop=msgBox.scrollHeight;
+}
+function clearAuto(){ if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} }
+function scheduleAuto(ms){ clearAuto(); autoTimer=setTimeout(petAutoSpeak,ms); }
 
-        // —— 可爱声线 TTS —— 
-        const u = new SpeechSynthesisUtterance(reply);
-        u.lang = 'en-US';
-        // 选一个高音 child 声线，fallback 用第一个
-        u.voice = voices.find(v=>v.name.toLowerCase().includes('child')) || voices[0];
-        u.pitch = 2.0;   // 更尖更萌
-        u.rate  = 1.2;   // 稍快一点
-        u.volume = 1;
-        speechSynthesis.speak(u);
-
-      } catch(e){
-        console.error(e);
-        appendMsg('[Network Error]','bot error');
-      } finally {
-        isChatting = false;
-        // 结束后重启 20s 自动
-        scheduleAuto(20000);
-      }
-    }
-
-    async function userSend(text){
-      clearAuto();
-      appendMsg(text,'user');
-      history.push({ role:'user', content: text });
-      await doChatRequest();
-    }
-
-    function petAutoSpeak(){
-      if (isChatting) {
-        return scheduleAuto(20000);
-      }
-      history.push({ role:'user', content: '' });
-      appendMsg('…','bot');
-      doChatRequest();
-    }
-
-    function clearAuto(){
-      if (autoTimer) {
-        clearTimeout(autoTimer);
-        autoTimer = null;
-      }
-    }
-    function scheduleAuto(ms){
-      clearAuto();
-      autoTimer = setTimeout(petAutoSpeak, ms);
-    }
-
-    // 发送按钮 & 回车
-    const sendBtn = document.getElementById('send-btn');
-    const textInput = document.getElementById('text-input');
-    sendBtn.addEventListener('click', ()=>{
-      const t = textInput.value.trim();
-      if (!t) return;
-      textInput.value = '';
-      userSend(t);
+async function talkToAPI(){
+  isChatting=true;
+  try{
+    const r=await fetch('/api/chat',{
+      method:'POST', mode:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:history})
     });
-    textInput.addEventListener('keypress', e=>{
-      if (e.key==='Enter') {
-        e.preventDefault();
-        sendBtn.click();
-      }
-    });
+    if(!r.ok){appendMsg('Error '+r.status,'bot error');return;}
+    const j=await r.json(), reply=j.choices?.[0]?.message?.content||'[No reply]';
+    history.push({role:'assistant',content:reply});
+    appendMsg(reply,'bot');
 
-    // 录音转写（Whisper）
-    const recordBtn = document.getElementById('record-btn');
-    let recorder, chunks = [];
-    recordBtn.addEventListener('click', async function(){
-      if (recorder?.state==='recording') {
-        recorder.stop();
-        this.classList.remove('recording');
-      } else {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-          recorder = new MediaRecorder(stream);
-          chunks = [];
-          recorder.ondataavailable = e=>chunks.push(e.data);
-          recorder.onstop = async ()=>{
-            const blob = new Blob(chunks,{type:'audio/webm'});
-            const form = new FormData();
-            form.append('file', blob, 'voice.webm');
-            form.append('model','whisper-1');
-            try {
-              const r = await fetch('/api/chat',{ method:'POST', body: form });
-              const j = await r.json();
-              if (j.text) userSend(j.text);
-            } catch(err){
-              console.error(err);
-              appendMsg('[Whisper Error]','bot error');
-            }
-          };
-          recorder.start();
-          this.classList.add('recording');
-        } catch(err){
-          console.error(err);
-          appendMsg('[Microphone access denied]','bot error');
-        }
-      }
-    });
+    /* ---------- TTS ---------- */
+    if(speechSynthesis){
+      const u=new SpeechSynthesisUtterance(reply);
+      u.lang='en-US';
+      u.voice=voices.find(v=>/kid|child|girl/.test(v.name.toLowerCase()))||voices[0]||null;
+      u.pitch=1.8; u.rate=1.2;
+      speechSynthesis.speak(u);
+    }
+  }catch(e){console.error(e);appendMsg('[Net Err]','bot error');}
+  finally{isChatting=false; scheduleAuto(20000);}
+}
 
-  });
-  </script>
+function userSend(txt){
+  clearAuto();
+  appendMsg(txt,'user');
+  history.push({role:'user',content:txt});
+  talkToAPI();
+}
+function petAutoSpeak(){
+  if(isChatting){ scheduleAuto(20000); return; }
+  history.push({role:'user',content:''});
+  appendMsg('…','bot');               // 让气泡先出现
+  talkToAPI();
+}
+
+/* ---------- 文字输入 ---------- */
+sendBtn.onclick=()=>{ const t=textInp.value.trim(); if(t){textInp.value=''; userSend(t);} };
+textInp.addEventListener('keypress',e=>{
+  if(e.key==='Enter'){e.preventDefault();sendBtn.click();}
+});
+
+/* ---------- 录音转写 ---------- */
+let recorder,chunks=[];
+recBtn.onclick=async function(){
+  if(recorder?.state==='recording'){
+    recorder.stop(); this.classList.remove('recording');
+    return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    recorder=new MediaRecorder(stream); chunks=[];
+    recorder.ondataavailable=e=>chunks.push(e.data);
+    recorder.onstop=async()=>{
+      const blob=new Blob(chunks,{type:'audio/webm'}),form=new FormData();
+      form.append('file',blob,'voice.webm'); form.append('model','whisper-1');
+      try{
+        const r=await fetch('/api/chat',{method:'POST',mode:'same-origin',body:form});
+        const j=await r.json(); if(j.text) userSend(j.text);
+      }catch(e){console.error(e);appendMsg('[Whisper Err]','bot error');}
+    };
+    recorder.start(); this.classList.add('recording');
+  }catch(e){console.error(e);appendMsg('[Mic denied]','bot error');}
+};
+
+}); /* DOMContentLoaded */
+</script>
 </body>
 </html>
