@@ -4,3 +4,4 @@ config.js
 # 其它常见忽略 
 node_modules
 .env
+"config.js" 
