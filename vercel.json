@@ -1,15 +1,11 @@
 {
   "version": 2,
   "builds": [
-    // 1）Serverless：所有 /api/* 都走 server.js
-    { "src": "server.js",     "use": "@vercel/node" },
-    // 2）Static：public 目录下的所有文件都当静态资源
-    { "src": "public/**/*",   "use": "@vercel/static" }
+    { "src": "server.js",   "use": "@vercel/node" },
+    { "src": "public/**/*", "use": "@vercel/static" }
   ],
   "routes": [
-    // 先把 /api/* 转给我们的 server.js
-    { "src": "/api/(.*)",     "dest": "server.js" },
-    // 其余一律返回 public/index.html —— SPA 模式
-    { "src": "/(.*)",         "dest": "/public/index.html" }
+    { "src": "/api/(.*)",   "dest": "server.js"          },
+    { "src": "/(.*)",       "dest": "/public/index.html" }
   ]
 }
