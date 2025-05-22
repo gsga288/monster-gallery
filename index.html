@@ -40,7 +40,7 @@
       border-radius: 4px;
       background: gold; color: #111;
     }
-    /* Params：only English */
+    /* Params: only English */
     .card-params {
       padding: 8px 12px;
       background: #2a2a2a;
@@ -64,7 +64,7 @@
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      object-fit: cover;   /* 改为 cover，去掉黑边 */
+      object-fit: cover;   /* cover 去黑边 */
       background: #000;
     }
     /* Description */
@@ -82,6 +82,7 @@
     <!-- Name & Rarity -->
     <div class="card-header">
       <div class="pet-name" id="pet-name">—</div>
+      <!-- 这里会写成 "Rarity: S" 这样的样式 -->
       <div class="pet-rarity" id="pet-rarity">—</div>
     </div>
     <!-- Params: English only -->
@@ -115,9 +116,13 @@
            + toBit(p.sound,80)
            + '0';
     }
-    function getRarity(code){
+    function getRarityLetter(code){
       const ones = code.split('').filter(c=>c==='1').length;
       return ['D','C','B','A','S'][ones];
+    }
+    function getRarityText(code){
+      // 返回 "Rarity: S" 这种格式
+      return 'Rarity: ' + getRarityLetter(code);
     }
 
     // 16 类映射，只用 b.mp4
@@ -141,7 +146,7 @@
     };
 
     function renderCard(){
-      const p = genParams();
+      const p   = genParams();
       const cat = categorize(p);
       const pet = PET_MAP[cat];
       if(!pet){ console.error("Missing category",cat); return; }
@@ -150,9 +155,12 @@
       document.getElementById('heart').textContent = p.heart;
       document.getElementById('touch').textContent = p.touch;
       document.getElementById('sound').textContent = p.sound;
-      // 填name/rarity/desc
+
+      // 填name
       document.getElementById('pet-name').textContent   = pet.name;
-      document.getElementById('pet-rarity').textContent = getRarity(cat);
+      // 填稀有度文字
+      document.getElementById('pet-rarity').textContent = getRarityText(cat);
+      // 填描述
       document.getElementById('pet-desc').textContent   = pet.desc;
 
       // 播放video
