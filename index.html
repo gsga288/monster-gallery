@@ -1,30 +1,30 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>卡牌式宠物展示</title>
+  <title>Pet Card Display</title>
   <style>
-    /* 整体居中，深色背景 */
+    /* 全页背景 */
     body, html {
       margin: 0; padding: 0;
-      background: #111;
-      font-family: "微软雅黑", sans-serif;
+      background: url('wonderland.png') no-repeat center center fixed;
+      background-size: cover;
+      font-family: sans-serif;
       color: #eee;
-      display: flex; flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh;
     }
     /* 卡牌容器 */
     .card {
       width: 80vw; max-width: 500px;
-      background: #222;
+      background: rgba(34,34,34,0.9);
       border: 2px solid #444;
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.6);
       overflow: hidden;
       display: flex; flex-direction: column;
     }
-    /* 头部：名字 + 稀有度 */
+    /* Header：name + rarity */
     .card-header {
       display: flex; justify-content: space-between;
       padding: 8px 12px;
@@ -32,262 +32,146 @@
       border-bottom: 1px solid #444;
     }
     .pet-name {
-      font-size: 1.2em;
-      font-weight: bold;
+      font-size: 1.2em; font-weight: bold;
     }
     .pet-rarity {
       font-size: 1.2em;
       padding: 2px 6px;
       border-radius: 4px;
-      background: gold;
-      color: #111;
+      background: gold; color: #111;
     }
-    /* 媒体区域 */
+    /* Params：only English */
+    .card-params {
+      padding: 8px 12px;
+      background: #2a2a2a;
+      border-bottom: 1px solid #444;
+      display: flex; justify-content: space-around;
+      font-size: 0.95em;
+    }
+    .card-params div {
+      display: flex; align-items: center;
+      gap: 4px;
+    }
+    /* Media area: 16:9, fill entirely */
     #media-container {
-      background: #000;
       width: 100%;
       height: 0;
       padding-bottom: 56.25%; /* 16:9 */
       position: relative;
+      background: #000;
     }
-    #media-container video,
-    #media-container img {
+    #media-container video {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      object-fit: contain;
+      object-fit: cover;   /* 改为 cover，去掉黑边 */
       background: #000;
     }
-    /* 介绍 */
+    /* Description */
     .pet-desc {
       padding: 12px;
       line-height: 1.4;
       font-size: 0.95em;
-      flex-grow: 1;
-    }
-    /* “再来一次”按钮 */
-    #reload {
-      margin: 16px;
-      padding: 8px 16px;
-      font-size: 1em;
-      border: none;
-      border-radius: 4px;
-      background: #28a;
-      color: #fff;
-      cursor: pointer;
-    }
-    #reload:hover {
-      background: #39b;
+      background: #222;
     }
   </style>
 </head>
 <body>
 
   <div class="card">
+    <!-- Name & Rarity -->
     <div class="card-header">
-      <div class="pet-name" id="pet-name">加载中…</div>
-      <div class="pet-rarity" id="pet-rarity">–</div>
+      <div class="pet-name" id="pet-name">—</div>
+      <div class="pet-rarity" id="pet-rarity">—</div>
     </div>
+    <!-- Params: English only -->
+    <div class="card-params">
+      <div>❤️ Heart Rate: <span id="heart">—</span></div>
+      <div>✋ Touch Dist.: <span id="touch">—</span></div>
+      <div>🔊 Sound Lvl: <span id="sound">—</span></div>
+    </div>
+    <!-- Video container -->
     <div id="media-container"></div>
-    <div class="pet-desc" id="pet-desc">——</div>
+    <!-- Text description -->
+    <div class="pet-desc" id="pet-desc">—</div>
   </div>
 
-  <button id="reload">🔄 再来一次</button>
-
   <script>
-  // —— 1. 随机生成四个参数 —— 
-  function randomInt(min,max){
-    return Math.floor(Math.random()*(max-min+1))+min;
-  }
-  function genParams(){
-    return {
-      heart: randomInt(60,100),
-      touch: randomInt(0,50),
-      sound: randomInt(0,120),
-      time:  randomInt(0,100)
+    // 随机参数
+    function randomInt(min,max){
+      return Math.floor(Math.random()*(max-min+1))+min;
+    }
+    function genParams(){
+      return {
+        heart: randomInt(60,100),
+        touch: randomInt(0,50),
+        sound: randomInt(0,120)
+      };
+    }
+    function toBit(val,thr){ return val>thr?'1':'0'; }
+    function categorize(p){
+      return toBit(p.heart,80)
+           + toBit(p.touch,25)
+           + toBit(p.sound,80)
+           + '0';
+    }
+    function getRarity(code){
+      const ones = code.split('').filter(c=>c==='1').length;
+      return ['D','C','B','A','S'][ones];
+    }
+
+    // 16 类映射，只用 b.mp4
+    const PET_MAP = {
+      "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4", name:"Gentle Jelly",   desc:"Floating calmly with soft motions."},
+      "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",  name:"Cuddly Whale",   desc:"Close and purring gently."},
+      "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",  name:"Alert Jelly",    desc:"Relaxed yet ever watchful."},
+      "0011":{src:"media/calm_friendly_alert_loving/b.mp4",   name:"Watchful Whale", desc:"Alert but seeking company."},
+      "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",name:"Reserved Jelly", desc:"Keeps distance, quietly observing."},
+      "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4", name:"Hesitant Heart", desc:"Tentatively trusts yet cautious."},
+      "0110":{src:"media/calm_reserved_alert_cautious/b.mp4", name:"Guarded Jelly",  desc:"Externally calm, internally vigilant."},
+      "0111":{src:"media/calm_reserved_alert_loving/b.mp4",  name:"Torn Tide",      desc:"Caught between caution and affection."},
+      "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",  desc:"Energetic bounce with a hint of caution."},
+      "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4", name:"Glowing Gem",   desc:"Radiant energy and gentle fondness."},
+      "1010":{src:"media/excited_friendly_alert_cautious/b.mp4", name:"Brave Guardian",desc:"Excited protector, always alert."},
+      "1011":{src:"media/excited_friendly_alert_loving/b.mp4",  name:"Fiery Embrace", desc:"Passion and vigilance intertwined."},
+      "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly", desc:"Vibrant yet respectfully distant."},
+      "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",     desc:"Quiet affection under a bright glow."},
+      "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",desc:"Blazing energy held in check."},
+      "1111":{src:"media/excited_reserved_alert_loving/b.mp4",  name:"Ultimate Bond", desc:"Love, energy, and vigilance as one."}
     };
-  }
 
-  // —— 2. 二值化 & 分类 —— 
-  function toBit(val,thr){ return val>thr?'1':'0'; }
-  function categorize(p){
-    const b0 = toBit(p.heart,80);
-    const b1 = toBit(p.touch,25);
-    const b2 = toBit(p.sound,80);
-    const b3 = toBit(p.time,30);
-    return b0+b1+b2+b3;
-  }
+    function renderCard(){
+      const p = genParams();
+      const cat = categorize(p);
+      const pet = PET_MAP[cat];
+      if(!pet){ console.error("Missing category",cat); return; }
 
-  // —— 3. 根据“1”的数量算稀有度 —— 
-  function getRarity(code){
-    const ones = code.split('').filter(c=>c==='1').length;
-    return ['D','C','B','A','S'][ones];
-  }
+      // 填参数
+      document.getElementById('heart').textContent = p.heart;
+      document.getElementById('touch').textContent = p.touch;
+      document.getElementById('sound').textContent = p.sound;
+      // 填name/rarity/desc
+      document.getElementById('pet-name').textContent   = pet.name;
+      document.getElementById('pet-rarity').textContent = getRarity(cat);
+      document.getElementById('pet-desc').textContent   = pet.desc;
 
-  // —— 4. 预设 16 类宠物（示例）—— 
-  // 注意：务必和你的 media/ 目录结构 & 文件名 **完全一致**（包括大小写）
-  const PET_MAP = {
-    "0000":[
-      {
-        src: "media/calm_friendly_relaxed_cautious/blue.mp4",
-        name: "幽蓝水母",
-        desc: "一只文静的水母宠物，轻柔地在深海中漂浮。"
-      }
-    ],
-    "0001":[
-      {
-        src: "media/calm_friendly_relaxed_loving/blue.mp4",
-        name: "依依蓝鲸",
-        desc: "亲近主人，温顺地在你身边游动并发出呼噜声。"
-      }
-    ],
-    "0010":[
-      {
-        src: "media/calm_friendly_alert_cautious/blue.mp4",
-        name: "警觉水母",
-        desc: "放松但微微警惕，耳朵竖起，随时观察四周。"
-      }
-    ],
-    "0011":[
-      {
-        src: "media/calm_friendly_alert_loving/blue.mp4",
-        name: "凝视蓝鲸",
-        desc: "警觉依然存在，却也渴望主人的抚摸与陪伴。"
-      }
-    ],
-    "0100":[
-      {
-        src: "media/calm_reserved_relaxed_cautious/blue.mp4",
-        name: "淡泊水母",
-        desc: "保持距离却安静地漂浮，不轻易靠近。"
-      }
-    ],
-    "0101":[
-      {
-        src: "media/calm_reserved_relaxed_loving/blue.mp4",
-        name: "半信半疑",
-        desc: "对主人略有信任，但仍旧保持微小距离。"
-      }
-    ],
-    "0110":[
-      {
-        src: "media/calm_reserved_alert_cautious/blue.mp4",
-        name: "警戒水母",
-        desc: "放松状态下却高度警觉，耳朵低垂。"
-      }
-    ],
-    "0111":[
-      {
-        src: "media/calm_reserved_alert_loving/blue.mp4",
-        name: "矛盾之蓝",
-        desc: "警惕又渴望，时而缩头，时而探身。"
-      }
-    ],
-    "1000":[
-      {
-        src: "media/excited_friendly_relaxed_cautious/blue.mp4",
-        name: "跃动水母",
-        desc: "兴奋却有些谨慎，身体快速振动。"
-      }
-    ],
-    "1001":[
-      {
-        src: "media/excited_friendly_relaxed_loving/creature2.png",
-        name: "甜蜜水晶",
-        desc: "活力四射，却亲昵依偎在你身边。"
-      }
-    ],
-    "1010":[
-      {
-        src: "media/excited_friendly_alert_cautious/blue.mp4",
-        name: "激昂守护者",
-        desc: "兴奋且警觉，准备为你保驾护航。"
-      }
-    ],
-    "1011":[
-      {
-        src: "media/excited_friendly_alert_loving/creature2.png",
-        name: "燃情眷恋",
-        desc: "热情与警惕并存，对你心存爱意。"
-      }
-    ],
-    "1100":[
-      {
-        src: "media/excited_reserved_relaxed_cautious/creature2.png",
-        name: "拘谨星尘",
-        desc: "外表兴奋，内心却保持一丝距离。"
-      }
-    ],
-    "1101":[
-      {
-        src: "media/excited_reserved_relaxed_loving/creature2.png",
-        name: "含蓄挚爱",
-        desc: "沉静中暗藏热情，偶尔用眼神示好。"
-      }
-    ],
-    "1110":[
-      {
-        src: "media/excited_reserved_alert_cautious/creature2.png",
-        name: "谨慎之焰",
-        desc: "激情与警惕齐飞，不轻易表露。"
-      }
-    ],
-    "1111":[
-      {
-        src: "media/excited_reserved_alert_loving/creature2.png",
-        name: "极致依恋",
-        desc: "热情、警惕、深情，完美交织于一身。"
-      }
-    ]
-  };
-
-  // —— 5. 渲染函数 —— 
-  function renderCard(){
-    // 5.1 随机参 & 分类
-    const p = genParams();
-    const cat = categorize(p);
-    const rarity = getRarity(cat);
-
-    // 5.2 取出这一类的列表 & 随机挑一个
-    const arr = PET_MAP[cat] || [];
-    if(!arr.length){
-      console.error("类别",cat,"没有配置任何宠物！");
-      return;
-    }
-    const pet = arr[Math.floor(Math.random()*arr.length)];
-
-    // 5.3 填值 —— 名字 / 稀有度 / 描述
-    document.getElementById('pet-name').textContent   = pet.name;
-    document.getElementById('pet-rarity').textContent = rarity;
-    document.getElementById('pet-desc').textContent   = pet.desc;
-
-    // 5.4 加载媒体
-    const container = document.getElementById('media-container');
-    container.innerHTML = '';
-    if(pet.src.endsWith('.mp4')){
+      // 播放video
+      const ctr = document.getElementById('media-container');
+      ctr.innerHTML = '';
       const v = document.createElement('video');
-      v.src            = pet.src;
-      v.autoplay       = true;
-      v.loop           = true;
-      v.muted          = true;
-      v.preload        = 'auto';
-      v.playsInline    = true;
+      v.src         = pet.src;
+      v.autoplay    = true;
+      v.loop        = true;
+      v.muted       = true;
+      v.preload     = 'auto';
+      v.playsInline = true;
       v.setAttribute('playsinline','');
-      v.setAttribute('webkit-playsinline','');
       v.addEventListener('loadedmetadata',()=>v.play().catch(()=>{}));
-      container.appendChild(v);
-    } else {
-      const img = document.createElement('img');
-      img.src = pet.src;
-      container.appendChild(img);
+      ctr.appendChild(v);
     }
-  }
 
-  // —— 6. 绑定 & 初始渲染 —— 
-  document.getElementById('reload')
-    .addEventListener('click', renderCard);
-  renderCard();
-
+    // 初次渲染
+    renderCard();
   </script>
 </body>
 </html>
