@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Pet Card & Voice Chat</title>
+<title>Pet Card &amp; Voice Chat</title>
 
-<!-----------  basic CSS  ----------->
+<!-- ----------  basic CSS  ---------- -->
 <style>
 /* 全局背景 */
 html,body{
@@ -48,8 +48,10 @@ html,body{
 .pet-desc{padding:12px;background:#222;font-size:.95em;line-height:1.4;}
 
 /* 聊天面板 */
-#chat{width:80vw;max-width:500px;padding:10px;margin:20px 0;
-  background:rgba(0,0,0,.6);border-radius:8px;display:flex;flex-direction:column;}
+#chat{
+  width:80vw;max-width:500px;padding:10px;margin:20px 0;
+  background:rgba(0,0,0,.6);border-radius:8px;display:flex;flex-direction:column;
+}
 #messages{flex:1;overflow-y:auto;max-height:200px;margin-bottom:10px;}
 .msg{margin:4px 0;}
 .user{text-align:right;color:#8be9fd;}
@@ -70,7 +72,7 @@ button{
 </head>
 
 <body>
-<!-------------------- 卡牌 -------------------->
+<!-- -------------------- 卡牌 -------------------- -->
 <div class="card">
   <div class="card-header">
     <div class="pet-name" id="pet-name">—</div>
@@ -78,8 +80,8 @@ button{
   </div>
   <div class="card-params">
     <div>❤️ Heart Rate: <span id="heart">—</span></div>
-    <div>✋ Touch: <span id="touch">—</span></div>
-    <div>🔊 Sound Lvl: <span id="sound">—</span></div>
+    <div>✋ Touch:      <span id="touch">—</span></div>
+    <div>🔊 Sound Lvl:  <span id="sound">—</span></div>
   </div>
   <div id="media-container">
     <button id="hatch-btn">Hatch</button>
@@ -87,7 +89,7 @@ button{
   <div class="pet-desc" id="pet-desc">—</div>
 </div>
 
-<!-------------------- 聊天 -------------------->
+<!-- -------------------- 聊天 -------------------- -->
 <div id="chat">
   <div id="messages"></div>
   <div id="controls">
@@ -97,22 +99,22 @@ button{
   </div>
 </div>
 
-<!-------------------- 脚本 -------------------->
+<!-- -------------------- 脚本 -------------------- -->
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
 
-/* ---------- 语音合成（准备声线） ---------- */
+/* ---------- 语音合成准备 ---------- */
 let voices=[];
-speechSynthesis.onvoiceschanged=()=>{ voices=speechSynthesis.getVoices(); };
+speechSynthesis.onvoiceschanged = ()=>voices = speechSynthesis.getVoices();
 
-/* ---------- 小工具 ---------- */
+/* ---------- 工具函数 ---------- */
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const toBit=(v,t)=>v>t?'1':'0';
-const genParams=()=>({heart:rnd(60,100),touch:rnd(0,50),sound:rnd(0,120)});
-const categorize=p=>toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
-const getRarity=c=>['D','C','B','A','S'][[...c].filter(x=>x==='1').length];
+const genParams  =()=>({heart:rnd(60,100),touch:rnd(0,50),sound:rnd(0,120)});
+const categorize =p => toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
+const rarity     =c => ['D','C','B','A','S'][[...c].filter(x=>x==='1').length];
 
-/* ---------- 16 只宠物数据保持不变 ---------- */
+/* ---------- PET_MAP（保持原样粘回） ---------- */
 const PET_MAP={
 "0000":{src:"media/calm_reserved_relaxed_cautious/b_mob.mp4",name:"Needlecrest Sylph",desc:`Grade A · Rare
 Appearance: A sleek, silvery-furred creature with a radiant crest of iridescent quills fanning down its back. Two curved, translucent horns arch gracefully from its head, and its large, violet-glowing eyes hold an ancient wisdom. Subtle bioluminescent markings trace along its limbs, pulsing softly like moonlight on water.
@@ -179,122 +181,73 @@ Personality: Sweet-natured and affectionate, it glows softly when touched and nu
 Heart Rate: 65 bpm | Touch: 26 / 50 | Sound Level: 108 / 120`}
 };
 
-/* ---------- DOM 引用 ---------- */
-const elHeart=document.getElementById('heart');
-const elTouch=document.getElementById('touch');
-const elSound=document.getElementById('sound');
-const elName =document.getElementById('pet-name');
-const elRarity=document.getElementById('pet-rarity');
-const elDesc  =document.getElementById('pet-desc');
-const mediaBox=document.getElementById('media-container');
-const hatchBtn=document.getElementById('hatch-btn');
+/* ---------- DOM 缓存 ---------- */
+const $ = id=>document.getElementById(id);
+const elHeart=$('heart'), elTouch=$('touch'), elSound=$('sound');
+const elName=$('pet-name'), elRarity=$('pet-rarity'), elDesc=$('pet-desc');
+const box=$('media-container'), btn=$('hatch-btn');
+const msgBox=$('messages'), input=$('text-input'), send=$('send-btn'), mic=$('record-btn');
 
-const msgBox =document.getElementById('messages');
-const textInp=document.getElementById('text-input');
-const sendBtn=document.getElementById('send-btn');
-const recBtn =document.getElementById('record-btn');
+/* ---------- 渲染 & 孵化 ---------- */
+let video, timer=null, chatting=false, history=[];
 
-/* ---------- 渲染卡牌、孵化 ---------- */
-let currentVideo;
-function newVideo(src){
+function makeVideo(src){
   const v=document.createElement('video');
-  v.src=src; v.loop=true; v.muted=true; v.preload='auto';
-  v.playsInline=true; v.setAttribute('playsinline','');
+  Object.assign(v,{src,loop:true,muted:true,preload:'auto',autoplay:true});
+  v.setAttribute('playsinline',''); v.playsInline=true;
   return v;
 }
 function renderCard(){
   const p=genParams(), code=categorize(p), pet=PET_MAP[code];
   elHeart.textContent=p.heart; elTouch.textContent=p.touch; elSound.textContent=p.sound;
-  elName.textContent=pet.name; elRarity.textContent=`Rarity: ${getRarity(code)}`;
-  elDesc.textContent=pet.desc;
-
-  mediaBox.innerHTML=''; mediaBox.appendChild(hatchBtn);
-  currentVideo=newVideo(pet.src);
+  elName.textContent=pet.name; elRarity.textContent=`Rarity: ${rarity(code)}`; elDesc.textContent=pet.desc;
+  box.innerHTML=''; box.appendChild(btn);         // 重新放置 Hatch 按钮
+  video=makeVideo(pet.src);
 }
 renderCard();
 
-hatchBtn.onclick=()=>{
-  mediaBox.innerHTML=''; mediaBox.appendChild(currentVideo);
-  currentVideo.play().catch(()=>{});
-  scheduleAuto(3000);         // 首次 3 s
+btn.onclick = ()=>{
+  box.innerHTML=''; box.appendChild(video); video.play().catch(()=>{});
+  scheduleAuto(3000);                       // 第一次 3 秒后自动说话
 };
 
-/* ---------- 聊天逻辑 ---------- */
-let history=[], isChatting=false, autoTimer=null;
+/* ---------- 自动说话 & 聊天 ---------- */
+function line(txt,cls){ const d=document.createElement('div'); d.className='msg '+cls; d.textContent=txt; msgBox.appendChild(d); msgBox.scrollTop=msgBox.scrollHeight; }
+function clearAuto(){ if(timer){clearTimeout(timer);} }
+function scheduleAuto(ms){ clearAuto(); timer=setTimeout(autoTalk,ms); }
 
-function appendMsg(txt,cls){
-  const div=document.createElement('div');
-  div.className='msg '+cls; div.textContent=txt;
-  msgBox.appendChild(div); msgBox.scrollTop=msgBox.scrollHeight;
-}
-function clearAuto(){ if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} }
-function scheduleAuto(ms){ clearAuto(); autoTimer=setTimeout(petAutoSpeak,ms); }
-
-async function talkToAPI(){
-  isChatting=true;
+async function talk(){
+  chatting=true;
   try{
-    const r=await fetch('/api/chat',{
-      method:'POST', mode:'same-origin',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:history})
-    });
-    if(!r.ok){appendMsg('Error '+r.status,'bot error');return;}
-    const j=await r.json(), reply=j.choices?.[0]?.message?.content||'[No reply]';
-    history.push({role:'assistant',content:reply});
-    appendMsg(reply,'bot');
-
-    /* ---------- TTS ---------- */
-    if(speechSynthesis){
-      const u=new SpeechSynthesisUtterance(reply);
-      u.lang='en-US';
-      u.voice=voices.find(v=>/kid|child|girl/.test(v.name.toLowerCase()))||voices[0]||null;
-      u.pitch=1.8; u.rate=1.2;
-      speechSynthesis.speak(u);
-    }
-  }catch(e){console.error(e);appendMsg('[Net Err]','bot error');}
-  finally{isChatting=false; scheduleAuto(20000);}
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
+    const j=await r.json(); const reply=j.choices?.[0]?.message?.content||'[No reply]';
+    history.push({role:'assistant',content:reply}); line(reply,'bot');
+    const u=new SpeechSynthesisUtterance(reply);
+    u.voice=voices.find(v=>/kid|child|girl/.test(v.name.toLowerCase()))||voices[0]||null; u.pitch=1.8; u.rate=1.2; speechSynthesis.speak(u);
+  }catch{ line('[Net Err]','bot error'); }
+  chatting=false; scheduleAuto(20000);
 }
+function sendMsg(t){ clearAuto(); line(t,'user'); history.push({role:'user',content:t}); talk(); }
+function autoTalk(){ if(chatting){scheduleAuto(20000);return;} history.push({role:'user',content:''}); line('…','bot'); talk(); }
 
-function userSend(txt){
-  clearAuto();
-  appendMsg(txt,'user');
-  history.push({role:'user',content:txt});
-  talkToAPI();
-}
-function petAutoSpeak(){
-  if(isChatting){ scheduleAuto(20000); return; }
-  history.push({role:'user',content:''});
-  appendMsg('…','bot');               // 让气泡先出现
-  talkToAPI();
-}
+/* ---------- 输入 / 发送 ---------- */
+send.onclick = ()=>{ const t=input.value.trim(); if(t){input.value=''; sendMsg(t);} };
+input.onkeypress = e=>{ if(e.key==='Enter'){e.preventDefault(); send.click();} };
 
-/* ---------- 文字输入 ---------- */
-sendBtn.onclick=()=>{ const t=textInp.value.trim(); if(t){textInp.value=''; userSend(t);} };
-textInp.addEventListener('keypress',e=>{
-  if(e.key==='Enter'){e.preventDefault();sendBtn.click();}
-});
-
-/* ---------- 录音转写 ---------- */
+/* ---------- 录音 ---------- */
 let recorder,chunks=[];
-recBtn.onclick=async function(){
-  if(recorder?.state==='recording'){
-    recorder.stop(); this.classList.remove('recording');
-    return;
-  }
+mic.onclick = async function(){
+  if(recorder?.state==='recording'){ recorder.stop(); this.classList.remove('recording'); return; }
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     recorder=new MediaRecorder(stream); chunks=[];
     recorder.ondataavailable=e=>chunks.push(e.data);
     recorder.onstop=async()=>{
-      const blob=new Blob(chunks,{type:'audio/webm'}),form=new FormData();
-      form.append('file',blob,'voice.webm'); form.append('model','whisper-1');
-      try{
-        const r=await fetch('/api/chat',{method:'POST',mode:'same-origin',body:form});
-        const j=await r.json(); if(j.text) userSend(j.text);
-      }catch(e){console.error(e);appendMsg('[Whisper Err]','bot error');}
+      const form=new FormData(); form.append('file',new Blob(chunks,{type:'audio/webm'}),'voice.webm'); form.append('model','whisper-1');
+      const r=await fetch('/api/chat',{method:'POST',body:form}); const j=await r.json(); if(j.text) sendMsg(j.text);
     };
     recorder.start(); this.classList.add('recording');
-  }catch(e){console.error(e);appendMsg('[Mic denied]','bot error');}
+  }catch{ line('[Mic denied]','bot error'); }
 };
 
 }); /* DOMContentLoaded */
