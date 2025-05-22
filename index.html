@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- 保证移动端布局正常 -->
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Pet Card & Voice Chat</title>
   <style>
-    /* ---------- 全局布局 ---------- */
+    /* ---------- 全局 & 布局 ---------- */
     body, html {
       margin:0; padding:0;
       background: url('wonderland.png') no-repeat center center fixed;
@@ -14,7 +15,7 @@
       display: flex; flex-direction: column;
       align-items: center; min-height: 100vh;
     }
-    /* ---------- 宠物卡牌 ---------- */
+    /* ---------- 卡牌样式 ---------- */
     .card {
       width: 80vw; max-width: 500px;
       background: rgba(34,34,34,0.9);
@@ -43,7 +44,7 @@
     }
     .card-params div { display:flex; align-items:center; gap:4px; }
 
-    /* ---------- 视频区域 ---------- */
+    /* ---------- 视频区（16:9） ---------- */
     #media-container {
       width:100%; padding-bottom:56.25%; /* 16:9 */
       position:relative; background:#000;
@@ -52,14 +53,6 @@
       position:absolute; top:0; left:0;
       width:100%; height:100%;
       object-fit:cover;
-    }
-    #incubate-btn {
-      position:absolute; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      padding:12px 24px; font-size:1.1em;
-      background:#6272a4; color:#fff;
-      border:none; border-radius:4px; cursor:pointer;
-      z-index:10;
     }
     .pet-desc {
       padding:12px; background:#222;
@@ -109,9 +102,7 @@
       <div>✋ Touch:      <span id="touch">—</span></div>
       <div>🔊 Sound Lvl: <span id="sound">—</span></div>
     </div>
-    <div id="media-container">
-      <button id="incubate-btn">Incubate</button>
-    </div>
+    <div id="media-container"></div>
     <div class="pet-desc" id="pet-desc">—</div>
   </div>
 
@@ -126,151 +117,158 @@
   </div>
 
   <script>
-  // —— 全局状态 —— 
-  let currentPet = null;
-  let history    = [{role:'system',content:'You are a friendly alien pet.'}];
+  // 等 DOM 都准备好再跑
+  document.addEventListener('DOMContentLoaded', ()=>{
 
-  // ---------- 宠物卡牌逻辑 ---------- 
-  function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
-  function genParams(){ return {heart:randomInt(60,100), touch:randomInt(0,50), sound:randomInt(0,120)}; }
-  function toBit(v,t){ return v>t?'1':'0'; }
-  function categorize(p){ return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0'; }
-  function getRarity(code){
-    const cnt = [...code].filter(x=>x==='1').length;
-    return ['D','C','B','A','S'][cnt];
-  }
-  const PET_MAP = {
-    "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4",     name:"Gentle Jelly",    desc:"Floating calmly."},
-    "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",      name:"Cuddly Whale",    desc:"Purring softly."},
-    "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",      name:"Alert Jelly",     desc:"Relaxed but watchful."},
-    "0011":{src:"media/calm_friendly_alert_loving/b.mp4",       name:"Watchful Whale",  desc:"Seeks company."},
-    "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",    name:"Reserved Jelly",  desc:"Keeps distance."},
-    "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4",     name:"Hesitant Heart",  desc:"Tentative trust."},
-    "0110":{src:"media/calm_reserved_alert_cautious/b.mp4",     name:"Guarded Jelly",   desc:"Vigilant calm."},
-    "0111":{src:"media/calm_reserved_alert_loving/b.mp4",       name:"Torn Tide",       desc:"Caution + love."},
-    "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",    desc:"Energetic bounce."},
-    "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4",  name:"Glowing Gem",     desc:"Radiant fondness."},
-    "1010":{src:"media/excited_friendly_alert_cautious/b.mp4",  name:"Brave Guardian",  desc:"Excited protector."},
-    "1011":{src:"media/excited_friendly_alert_loving/b.mp4",    name:"Fiery Embrace",   desc:"Passion + vigilance."},
-    "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly",   desc:"Vibrant distance."},
-    "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",       desc:"Quiet affection."},
-    "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",  desc:"Controlled blaze."},
-    "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",   desc:"Love & vigilance."}
-  };
+    /*** 一、宠物卡牌逻辑 ***/
+    function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+    function genParams(){return{heart:randomInt(60,100),touch:randomInt(0,50),sound:randomInt(0,120)};}
+    function toBit(v,t){return v>t?'1':'0';}
+    function categorize(p){return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';}
+    function getRarity(code){
+      const cnt = [...code].filter(x=>x==='1').length;
+      return ['D','C','B','A','S'][cnt];
+    }
+    const PET_MAP = {
+      "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4",     name:"Gentle Jelly",    desc:"Floating calmly."},
+      "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",      name:"Cuddly Whale",    desc:"Purring softly."},
+      "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",      name:"Alert Jelly",     desc:"Relaxed but watchful."},
+      "0011":{src:"media/calm_friendly_alert_loving/b.mp4",       name:"Watchful Whale",  desc:"Seeks company."},
+      "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",    name:"Reserved Jelly",  desc:"Keeps distance."},
+      "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4",     name:"Hesitant Heart",  desc:"Tentative trust."},
+      "0110":{src:"media/calm_reserved_alert_cautious/b.mp4",     name:"Guarded Jelly",   desc:"Vigilant calm."},
+      "0111":{src:"media/calm_reserved_alert_loving/b.mp4",       name:"Torn Tide",       desc:"Caution + love."},
+      "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",    desc:"Energetic bounce."},
+      "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4",  name:"Glowing Gem",     desc:"Radiant fondness."},
+      "1010":{src:"media/excited_friendly_alert_cautious/b.mp4",  name:"Brave Guardian",  desc:"Excited protector."},
+      "1011":{src:"media/excited_friendly_alert_loving/b.mp4",    name:"Fiery Embrace",   desc:"Passion + vigilance."},
+      "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly",   desc:"Vibrant distance."},
+      "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",       desc:"Quiet affection."},
+      "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",  desc:"Controlled blaze."},
+      "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",   desc:"Love & vigilance."}
+    };
 
-  function renderCard(){
-    const p     = genParams(),
-          code  = categorize(p),
-          pet   = PET_MAP[code];
-    currentPet = pet;
-    // 填数字
-    document.getElementById('heart').textContent   = p.heart;
-    document.getElementById('touch').textContent   = p.touch;
-    document.getElementById('sound').textContent   = p.sound;
-    // 填文字
-    document.getElementById('pet-name').textContent   = pet.name;
-    document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
-    document.getElementById('pet-desc').textContent   = pet.desc;
-  }
-  renderCard();
-
-  // ---------- 孵化按钮 ---------- 
-  document.getElementById('incubate-btn').onclick = () => {
-    const ctr   = document.getElementById('media-container');
-    ctr.innerHTML = '';  // 移除按钮
-    const video  = document.createElement('video');
-    video.src         = currentPet.src;
-    video.autoplay    = true;
-    video.muted       = true;      // 视频无声
-    video.loop        = true;
-    video.playsInline = true;
-    video.preload     = 'auto';
-    video.style.position   = 'absolute';
-    video.style.top        = '0';
-    video.style.left       = '0';
-    video.style.width      = '100%';
-    video.style.height     = '100%';
-    video.style.objectFit  = 'cover';
-    // 遇错重试
-    video.addEventListener('error', ()=> {
-      setTimeout(()=> video.load() && video.play(), 800);
-    });
-    ctr.appendChild(video);
-    video.play().catch(()=>{});
-  };
-
-  // ---------- 聊天逻辑，前端调用 /api/chat ---------- 
-  const messagesDiv = document.getElementById('messages');
-  function appendMsg(txt, cls) {
-    const d = document.createElement('div');
-    d.className = `msg ${cls}`;
-    d.textContent = txt;
-    messagesDiv.appendChild(d);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  async function sendChat(text) {
-    appendMsg(text, 'user');
-    history.push({role:'user',content:text});
-    try {
-      const res = await fetch('/api/chat', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ model:'gpt-4o', messages: history })
+    function renderCard(){
+      const p = genParams(), code = categorize(p), pet = PET_MAP[code];
+      // 数字
+      document.getElementById('heart').textContent   = p.heart;
+      document.getElementById('touch').textContent   = p.touch;
+      document.getElementById('sound').textContent   = p.sound;
+      // 文本
+      document.getElementById('pet-name').textContent   = pet.name;
+      document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
+      document.getElementById('pet-desc').textContent   = pet.desc;
+      // 视频
+      const ctr = document.getElementById('media-container');
+      ctr.innerHTML = '';
+      const v = document.createElement('video');
+      v.src          = pet.src;
+      v.autoplay     = true;
+      v.muted        = true;      // 视频本身静音，确保自动播放
+      v.loop         = true;
+      v.playsInline  = true;
+      v.preload      = 'auto';
+      ctr.appendChild(v);
+      // 尝试自动播放；若被阻止，绑定用户第一次点击
+      v.play().catch(()=> {
+        ctr.addEventListener('click', ()=> v.play(), { once:true });
       });
-      if (!res.ok) {
-        appendMsg(`Error ${res.status}`, 'bot error');
-        return;
-      }
-      const js = await res.json();
-      const reply = js.choices[0].message.content;
-      history.push({role:'assistant',content:reply});
-      appendMsg(reply, 'bot');
-      // TTS
-      const u = new SpeechSynthesisUtterance(reply);
-      u.lang = 'en-US';
-      speechSynthesis.speak(u);
-    } catch {
-      appendMsg('[Network Error]', 'bot error');
     }
-  }
+    renderCard();
 
-  document.getElementById('send-btn').onclick = () => {
-    const inp = document.getElementById('text-input'),
-          t   = inp.value.trim();
-    if (!t) return;
-    inp.value = '';
-    sendChat(t);
-  };
+    /*** 二、聊天 & 语音转写 ***/
+    const msgs = document.getElementById('messages');
+    let history = [{role:'system',content:'You are a friendly alien pet.'}];
 
-  // ---------- Whisper 录音转文字，前端调用 /api/whisper ---------- 
-  let recorder, chunks = [];
-  document.getElementById('record-btn').onclick = async function() {
-    if (recorder && recorder.state==='recording') {
-      recorder.stop();
-      this.classList.remove('recording');
-    } else {
-      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-      recorder = new MediaRecorder(stream);
-      chunks = [];
-      recorder.ondataavailable = e=>chunks.push(e.data);
-      recorder.onstop = async ()=>{
-        const blob = new Blob(chunks,{type:'audio/webm'});
-        const form = new FormData();
-        form.append('file', blob, 'voice.webm');
-        form.append('model','whisper-1');
-        try {
-          const r = await fetch('/api/whisper', { method:'POST', body: form });
-          const j = await r.json();
-          if (j.text) sendChat(j.text);
-        } catch {
-          appendMsg('[Whisper Error]','bot error');
+    function appendMsg(txt, cls){
+      const d = document.createElement('div');
+      d.className = `msg ${cls}`;
+      d.textContent = txt;
+      msgs.appendChild(d);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    async function sendChat(text){
+      appendMsg(text,'user');
+      history.push({role:'user',content:text});
+
+      try {
+        const res = await fetch('/api/chat', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ messages: history })
+        });
+        if (!res.ok) {
+          const code = res.status;
+          appendMsg(code===401
+            ? 'Error 401: Unauthorized'
+            : `Error ${code}`, 'bot error');
+          return;
         }
-      };
-      recorder.start();
-      this.classList.add('recording');
+        const j = await res.json();
+        const reply = j.choices[0].message.content;
+        history.push({role:'assistant',content:reply});
+        appendMsg(reply,'bot');
+        // 文字转语音
+        const u = new SpeechSynthesisUtterance(reply);
+        u.lang = 'en-US';
+        speechSynthesis.speak(u);
+      } catch (err) {
+        console.error(err);
+        appendMsg('[Network Error]','bot error');
+      }
     }
-  };
+
+    document.getElementById('send-btn')
+      .addEventListener('click', ()=>{
+        const inp = document.getElementById('text-input');
+        const t = inp.value.trim();
+        if (!t) return;
+        inp.value = '';
+        sendChat(t);
+      });
+
+    // Whisper 录音 → 文本
+    let recorder, chunks = [];
+    document.getElementById('record-btn')
+      .addEventListener('click', async function(){
+        if (recorder && recorder.state==='recording') {
+          recorder.stop();
+          this.classList.remove('recording');
+        } else {
+          const s = await navigator.mediaDevices.getUserMedia({audio:true});
+          recorder = new MediaRecorder(s);
+          chunks = [];
+          recorder.ondataavailable = e=>chunks.push(e.data);
+          recorder.onstop = async ()=>{
+            const blob = new Blob(chunks,{type:'audio/webm'});
+            const form = new FormData();
+            form.append('file', blob, 'voice.webm');
+            form.append('model','whisper-1');
+            try {
+              const r = await fetch('/api/chat', {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                body: JSON.stringify({
+                  // OpenAI Whisper 接口和 Chat 接口共用同一个 proxy 路由
+                  // 后端看 file 字段自动切换到 transcription
+                  file: blob,
+                  model: 'whisper-1'
+                })
+              });
+              const j = await r.json();
+              if (j.text) sendChat(j.text);
+            } catch(e) {
+              console.error(e);
+              appendMsg('[Whisper Error]','bot error');
+            }
+          };
+          recorder.start();
+          this.classList.add('recording');
+        }
+      });
+
+  }); // DOMContentLoaded
   </script>
 </body>
 </html>
