@@ -1,3 +1,6 @@
+# 不要把 API key 上传
 config.js
+
+# 其它常见忽略 
 node_modules
 .env
