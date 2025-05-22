@@ -1,11 +1,16 @@
+// vercel.json
 {
   "version": 2,
   "builds": [
-    { "src": "server.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" }
+    // 1）把 server.js 当成 Node 函数打包
+    { "src": "server.js",         "use": "@vercel/node" },
+    // 2）把 public 目录下的所有文件当静态资源
+    { "src": "public/**/*",       "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "server.js" },
-    { "src": "/(.*)",      "dest": "/index.html" }
+    // 所有 /api/* 都走我们的 server.js
+    { "src": "/api/(.*)",         "dest": "server.js" },
+    // 其他所有路由都返回 public/index.html（SPA 模式）
+    { "src": "/(.*)",             "dest": "/public/index.html" }
   ]
 }
