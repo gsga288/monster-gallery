@@ -131,6 +131,12 @@
   <script>
   document.addEventListener('DOMContentLoaded', ()=>{
 
+    /*** 语音合成准备 ***/
+    let voices = [];
+    speechSynthesis.onvoiceschanged = ()=> {
+      voices = speechSynthesis.getVoices();
+    };
+
     /*** 一、宠物卡牌逻辑 ***/
     function randomInt(min,max){
       return Math.floor(Math.random()*(max-min+1))+min;
@@ -138,7 +144,7 @@
     function genParams(){
       return { heart:randomInt(60,100), touch:randomInt(0,50), sound:randomInt(0,120) };
     }
-    function toBit(v,t){ return v>t?'1':'0'; }
+    function toBit(v,t){ return v>t ? '1' : '0'; }
     function categorize(p){
       return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
     }
@@ -146,7 +152,7 @@
       const cnt = [...code].filter(x=>x==='1').length;
       return ['D','C','B','A','S'][cnt];
     }
-    const PET_MAP = {
+     const PET_MAP = {
       "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4", name:"Gentle Jelly",    desc:"Floating calmly."},
       "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",  name:"Cuddly Whale",    desc:"Purring softly."},
       "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",  name:"Alert Jelly",     desc:"Relaxed but watchful."},
@@ -189,7 +195,7 @@
         ctr.innerHTML = '';
         ctr.appendChild(currentVideo);
         currentVideo.play().catch(()=>{});
-        // 第一次主动发言：3秒后
+        // 孵化后 3s 首次主动发言
         scheduleAuto(3000);
       };
     }
@@ -225,16 +231,23 @@
         const reply = j.choices[0].message.content;
         history.push({ role:'assistant', content: reply });
         appendMsg(reply,'bot');
-        // TTS
+
+        // —— 可爱声线 TTS —— 
         const u = new SpeechSynthesisUtterance(reply);
         u.lang = 'en-US';
+        // 选一个高音 child 声线，fallback 用第一个
+        u.voice = voices.find(v=>v.name.toLowerCase().includes('child')) || voices[0];
+        u.pitch = 2.0;   // 更尖更萌
+        u.rate  = 1.2;   // 稍快一点
+        u.volume = 1;
         speechSynthesis.speak(u);
+
       } catch(e){
         console.error(e);
         appendMsg('[Network Error]','bot error');
       } finally {
         isChatting = false;
-        // 结束后重新 20 秒计时
+        // 结束后重启 20s 自动
         scheduleAuto(20000);
       }
     }
@@ -250,7 +263,6 @@
       if (isChatting) {
         return scheduleAuto(20000);
       }
-      // 伪装成用户输入空消息触发宠物主动说
       history.push({ role:'user', content: '' });
       appendMsg('…','bot');
       doChatRequest();
@@ -277,17 +289,17 @@
       userSend(t);
     });
     textInput.addEventListener('keypress', e=>{
-      if (e.key === 'Enter') {
+      if (e.key==='Enter') {
         e.preventDefault();
         sendBtn.click();
       }
     });
 
-    // Whisper 录音转写
+    // 录音转写（Whisper）
     const recordBtn = document.getElementById('record-btn');
     let recorder, chunks = [];
     recordBtn.addEventListener('click', async function(){
-      if (recorder?.state === 'recording') {
+      if (recorder?.state==='recording') {
         recorder.stop();
         this.classList.remove('recording');
       } else {
@@ -297,12 +309,12 @@
           chunks = [];
           recorder.ondataavailable = e=>chunks.push(e.data);
           recorder.onstop = async ()=>{
-            const blob = new Blob(chunks, { type:'audio/webm' });
+            const blob = new Blob(chunks,{type:'audio/webm'});
             const form = new FormData();
             form.append('file', blob, 'voice.webm');
             form.append('model','whisper-1');
             try {
-              const r = await fetch('/api/chat', { method:'POST', body: form });
+              const r = await fetch('/api/chat',{ method:'POST', body: form });
               const j = await r.json();
               if (j.text) userSend(j.text);
             } catch(err){
