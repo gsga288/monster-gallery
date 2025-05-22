@@ -2,13 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- 移动端友好 -->
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Pet Card & Voice Chat</title>
-
-  <!-- 1️⃣ 先加载 KEY -->
-  <script src="config.js"></script>
-
   <style>
     /* ---------- 全局布局 ---------- */
     body, html {
@@ -19,7 +14,7 @@
       display: flex; flex-direction: column;
       align-items: center; min-height: 100vh;
     }
-    /* ---------- 卡牌样式 ---------- */
+    /* ---------- 宠物卡牌 ---------- */
     .card {
       width: 80vw; max-width: 500px;
       background: rgba(34,34,34,0.9);
@@ -58,7 +53,14 @@
       width:100%; height:100%;
       object-fit:cover;
     }
-
+    #incubate-btn {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      padding:12px 24px; font-size:1.1em;
+      background:#6272a4; color:#fff;
+      border:none; border-radius:4px; cursor:pointer;
+      z-index:10;
+    }
     .pet-desc {
       padding:12px; background:#222;
       font-size:0.95em; line-height:1.4;
@@ -107,7 +109,9 @@
       <div>✋ Touch:      <span id="touch">—</span></div>
       <div>🔊 Sound Lvl: <span id="sound">—</span></div>
     </div>
-    <div id="media-container"></div>
+    <div id="media-container">
+      <button id="incubate-btn">Incubate</button>
+    </div>
     <div class="pet-desc" id="pet-desc">—</div>
   </div>
 
@@ -116,25 +120,26 @@
     <div id="messages"></div>
     <div id="controls">
       <button id="record-btn">🎤</button>
-      <input id="text-input" placeholder="Type message…" />
+      <input  id="text-input" placeholder="Type message…" />
       <button id="send-btn">Send</button>
     </div>
   </div>
 
   <script>
-  // —— 读取 API Key —— 
-  const OPENAI_API_KEY = window.OPENAI_API_KEY;
+  // —— 全局状态 —— 
+  let currentPet = null;
+  let history    = [{role:'system',content:'You are a friendly alien pet.'}];
 
-  /*** 宠物卡牌逻辑 ***/
-  function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-  function genParams(){return{heart:randomInt(60,100),touch:randomInt(0,50),sound:randomInt(0,120)};}
-  function toBit(v,t){return v>t?'1':'0';}
-  function categorize(p){return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';}
+  // ---------- 宠物卡牌逻辑 ---------- 
+  function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+  function genParams(){ return {heart:randomInt(60,100), touch:randomInt(0,50), sound:randomInt(0,120)}; }
+  function toBit(v,t){ return v>t?'1':'0'; }
+  function categorize(p){ return toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0'; }
   function getRarity(code){
     const cnt = [...code].filter(x=>x==='1').length;
     return ['D','C','B','A','S'][cnt];
   }
-    const PET_MAP = {
+  const PET_MAP = {
     "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4",     name:"Gentle Jelly",    desc:"Floating calmly."},
     "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",      name:"Cuddly Whale",    desc:"Purring softly."},
     "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",      name:"Alert Jelly",     desc:"Relaxed but watchful."},
@@ -154,127 +159,118 @@
   };
 
   function renderCard(){
-    const p = genParams(), code = categorize(p), pet = PET_MAP[code];
-    // 填入数字
+    const p     = genParams(),
+          code  = categorize(p),
+          pet   = PET_MAP[code];
+    currentPet = pet;
+    // 填数字
     document.getElementById('heart').textContent   = p.heart;
     document.getElementById('touch').textContent   = p.touch;
     document.getElementById('sound').textContent   = p.sound;
-    // 填入文字
+    // 填文字
     document.getElementById('pet-name').textContent   = pet.name;
     document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
     document.getElementById('pet-desc').textContent   = pet.desc;
-
-    // 视频加载并尝试播放
-    const ctr = document.getElementById('media-container');
-    ctr.innerHTML = '';
-    const v = document.createElement('video');
-    v.src          = pet.src;
-    v.autoplay     = true;
-    v.muted        = true;
-    v.loop         = true;
-    v.playsInline  = true;
-    v.preload      = 'auto';
-    // 处理播放失败：重试 + 提示用户点击
-    v.addEventListener('error', ()=>{
-      console.warn('Video load error, retrying...');
-      setTimeout(()=>{ v.load(); v.play().catch(()=>{}); }, 1000);
-    });
-    // 某些机型仍需用户手势唤醒
-    ctr.addEventListener('click', ()=> v.play(), {once:true});
-    ctr.appendChild(v);
-    v.play().catch(()=>{ /* 自动播放被阻止，用户点击后会生效 */ });
   }
   renderCard();
 
-  /*** 聊天逻辑 ***/
-  const msgs = document.getElementById('messages');
-  let history = [{role:'system',content:'You are a friendly alien pet.'}];
-  function appendMsg(txt, cls){
+  // ---------- 孵化按钮 ---------- 
+  document.getElementById('incubate-btn').onclick = () => {
+    const ctr   = document.getElementById('media-container');
+    ctr.innerHTML = '';  // 移除按钮
+    const video  = document.createElement('video');
+    video.src         = currentPet.src;
+    video.autoplay    = true;
+    video.muted       = true;      // 视频无声
+    video.loop        = true;
+    video.playsInline = true;
+    video.preload     = 'auto';
+    video.style.position   = 'absolute';
+    video.style.top        = '0';
+    video.style.left       = '0';
+    video.style.width      = '100%';
+    video.style.height     = '100%';
+    video.style.objectFit  = 'cover';
+    // 遇错重试
+    video.addEventListener('error', ()=> {
+      setTimeout(()=> video.load() && video.play(), 800);
+    });
+    ctr.appendChild(video);
+    video.play().catch(()=>{});
+  };
+
+  // ---------- 聊天逻辑，前端调用 /api/chat ---------- 
+  const messagesDiv = document.getElementById('messages');
+  function appendMsg(txt, cls) {
     const d = document.createElement('div');
     d.className = `msg ${cls}`;
     d.textContent = txt;
-    msgs.appendChild(d);
-    msgs.scrollTop = msgs.scrollHeight;
+    messagesDiv.appendChild(d);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
-  async function sendChat(text){
-    appendMsg(text,'user');
+  async function sendChat(text) {
+    appendMsg(text, 'user');
     history.push({role:'user',content:text});
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('/api/chat', {
         method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'Authorization':'Bearer '+OPENAI_API_KEY
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: history
-        })
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ model:'gpt-4o', messages: history })
       });
       if (!res.ok) {
-        const errMsg = res.status===401
-          ? 'Error 401: Unauthorized (check your API key)'
-          : `Error ${res.status}`;
-        return appendMsg(errMsg,'bot error');
+        appendMsg(`Error ${res.status}`, 'bot error');
+        return;
       }
       const js = await res.json();
       const reply = js.choices[0].message.content;
       history.push({role:'assistant',content:reply});
-      appendMsg(reply,'bot');
+      appendMsg(reply, 'bot');
       // TTS
       const u = new SpeechSynthesisUtterance(reply);
-      u.lang='en-US';
+      u.lang = 'en-US';
       speechSynthesis.speak(u);
-    } catch(e){
-      console.error(e);
-      appendMsg('[Network Error]','bot error');
+    } catch {
+      appendMsg('[Network Error]', 'bot error');
     }
   }
 
-  document.getElementById('send-btn')
-    .onclick = ()=> {
-      const i = document.getElementById('text-input');
-      const t = i.value.trim();
-      if (!t) return;
-      i.value = '';
-      sendChat(t);
-    };
+  document.getElementById('send-btn').onclick = () => {
+    const inp = document.getElementById('text-input'),
+          t   = inp.value.trim();
+    if (!t) return;
+    inp.value = '';
+    sendChat(t);
+  };
 
-  /*** Whisper 录音转文字 ***/
+  // ---------- Whisper 录音转文字，前端调用 /api/whisper ---------- 
   let recorder, chunks = [];
-  document.getElementById('record-btn')
-    .onclick = async function(){
-      if (recorder && recorder.state==='recording') {
-        recorder.stop();
-        this.classList.remove('recording');
-      } else {
-        const s = await navigator.mediaDevices.getUserMedia({audio:true});
-        recorder = new MediaRecorder(s);
-        chunks = [];
-        recorder.ondataavailable = e=>chunks.push(e.data);
-        recorder.onstop = async ()=>{
-          const blob = new Blob(chunks,{type:'audio/webm'});
-          const f = new FormData();
-          f.append('file',blob,'voice.webm');
-          f.append('model','whisper-1');
-          try {
-            const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-              method:'POST',
-              headers:{ Authorization:'Bearer '+OPENAI_API_KEY },
-              body: f
-            });
-            const j = await r.json();
-            if (j.text) sendChat(j.text);
-          } catch(err){
-            console.error(err);
-            appendMsg('[Whisper Error]','bot error');
-          }
-        };
-        recorder.start();
-        this.classList.add('recording');
-      }
-    };
+  document.getElementById('record-btn').onclick = async function() {
+    if (recorder && recorder.state==='recording') {
+      recorder.stop();
+      this.classList.remove('recording');
+    } else {
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      recorder = new MediaRecorder(stream);
+      chunks = [];
+      recorder.ondataavailable = e=>chunks.push(e.data);
+      recorder.onstop = async ()=>{
+        const blob = new Blob(chunks,{type:'audio/webm'});
+        const form = new FormData();
+        form.append('file', blob, 'voice.webm');
+        form.append('model','whisper-1');
+        try {
+          const r = await fetch('/api/whisper', { method:'POST', body: form });
+          const j = await r.json();
+          if (j.text) sendChat(j.text);
+        } catch {
+          appendMsg('[Whisper Error]','bot error');
+        }
+      };
+      recorder.start();
+      this.classList.add('recording');
+    }
+  };
   </script>
 </body>
 </html>
