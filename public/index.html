@@ -8,7 +8,7 @@
     /* ---------- 全局 & 布局 ---------- */
     body, html {
       margin:0; padding:0;
-      background: url('/wonderland.png') no-repeat center center fixed;
+      background: url('wonderland.png') no-repeat center center fixed;
       background-size: cover;
       font-family: sans-serif; color: #eee;
       display: flex; flex-direction: column;
@@ -53,6 +53,7 @@
       width:100%; height:100%;
       object-fit:cover;
     }
+    /* 孵化按钮，绝对居中 */
     #hatch-btn {
       position:absolute;
       top:50%; left:50%;
@@ -106,8 +107,8 @@
   <!-- ===== 宠物卡牌 ===== -->
   <div class="card">
     <div class="card-header">
-      <div class="pet-name" id="pet-name">—</div>
-      <div class="pet-rarity" id="pet-rarity">—</div>
+      <div id="pet-name">—</div>
+      <div id="pet-rarity">—</div>
     </div>
     <div class="card-params">
       <div>❤️ Heart Rate: <span id="heart">—</span></div>
@@ -142,54 +143,42 @@
       const cnt = [...code].filter(x=>x==='1').length;
       return ['D','C','B','A','S'][cnt];
     }
-
     const PET_MAP = {
-      "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4", name:"Gentle Jelly", desc:"Floating calmly."},
-      "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",  name:"Cuddly Whale", desc:"Purring softly."},
-      "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",  name:"Alert Jelly",  desc:"Relaxed but watchful."},
-      "0011":{src:"media/calm_friendly_alert_loving/b.mp4",   name:"Watchful Whale",desc:"Seeks company."},
-      "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",name:"Reserved Jelly",desc:"Keeps distance."},
-      "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4", name:"Hesitant Heart",desc:"Tentative trust."},
-      "0110":{src:"media/calm_reserved_alert_cautious/b.mp4", name:"Guarded Jelly", desc:"Vigilant calm."},
-      "0111":{src:"media/calm_reserved_alert_loving/b.mp4",   name:"Torn Tide",    desc:"Caution + love."},
-      "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",desc:"Energetic bounce."},
-      "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4",  name:"Glowing Gem", desc:"Radiant fondness."},
-      "1010":{src:"media/excited_friendly_alert_cautious/b.mp4",  name:"Brave Guardian",desc:"Excited protector."},
-      "1011":{src:"media/excited_friendly_alert_loving/b.mp4",    name:"Fiery Embrace",desc:"Passion + vigilance."},
-      "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly",desc:"Vibrant distance."},
-      "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",    desc:"Quiet affection."},
-      "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",desc:"Controlled blaze."},
-      "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",desc:"Love & vigilance."}
+      "0000":{src:"media/calm_friendly_relaxed_cautious/b.mp4",     name:"Gentle Jelly",    desc:"Floating calmly."},
+      "0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",      name:"Cuddly Whale",    desc:"Purring softly."},
+      "0010":{src:"media/calm_friendly_alert_cautious/b.mp4",      name:"Alert Jelly",     desc:"Relaxed but watchful."},
+      "0011":{src:"media/calm_friendly_alert_loving/b.mp4",       name:"Watchful Whale",  desc:"Seeks company."},
+      "0100":{src:"media/calm_reserved_relaxed_cautious/b.mp4",    name:"Reserved Jelly",  desc:"Keeps distance."},
+      "0101":{src:"media/calm_reserved_relaxed_loving/b.mp4",     name:"Hesitant Heart",  desc:"Tentative trust."},
+      "0110":{src:"media/calm_reserved_alert_cautious/b.mp4",     name:"Guarded Jelly",   desc:"Vigilant calm."},
+      "0111":{src:"media/calm_reserved_alert_loving/b.mp4",       name:"Torn Tide",       desc:"Caution + love."},
+      "1000":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Bouncy Jelly",    desc:"Energetic bounce."},
+      "1001":{src:"media/excited_friendly_relaxed_loving/b.mp4",  name:"Glowing Gem",     desc:"Radiant fondness."},
+      "1010":{src:"media/excited_friendly_alert_cautious/b.mp4",  name:"Brave Guardian",  desc:"Excited protector."},
+      "1011":{src:"media/excited_friendly_alert_loving/b.mp4",    name:"Fiery Embrace",   desc:"Passion + vigilance."},
+      "1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Starlit Jelly",   desc:"Vibrant distance."},
+      "1101":{src:"media/excited_reserved_relaxed_loving/b.mp4", name:"Shy Spark",       desc:"Quiet affection."},
+      "1110":{src:"media/excited_reserved_alert_cautious/b.mp4", name:"Cautious Blaze",  desc:"Controlled blaze."},
+      "1111":{src:"media/excited_reserved_alert_loving/b.mp4",   name:"Ultimate Bond",   desc:"Love & vigilance."}
     };
 
     let currentVideo;
     function renderCard(){
-      const p = genParams(),
-            code = categorize(p),
-            pet = PET_MAP[code];
-
+      const p = genParams(), code = categorize(p), pet = PET_MAP[code];
       document.getElementById('heart').textContent = p.heart;
       document.getElementById('touch').textContent = p.touch;
       document.getElementById('sound').textContent = p.sound;
-      document.getElementById('pet-name').textContent = pet.name;
+      document.getElementById('pet-name').textContent   = pet.name;
       document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
-      document.getElementById('pet-desc').textContent = pet.desc;
-
+      document.getElementById('pet-desc').textContent   = pet.desc;
       const ctr = document.getElementById('media-container');
       ctr.innerHTML = `<button id="hatch-btn">Hatch</button>`;
-
-      // —— 预加载视频 —— 
       currentVideo = document.createElement('video');
-      currentVideo.src         = '/' + pet.src;  // 绝对路径
+      currentVideo.src         = pet.src;
       currentVideo.loop        = true;
       currentVideo.playsInline = true;
       currentVideo.muted       = true;
       currentVideo.preload     = 'auto';
-
-      currentVideo.onerror = ()=> {
-        ctr.innerHTML = '<div style="color:red;text-align:center;padding:20px;">Video not found</div>';
-      };
-
       ctr.querySelector('#hatch-btn').onclick = ()=>{
         ctr.innerHTML = '';
         ctr.appendChild(currentVideo);
@@ -214,39 +203,39 @@
       appendMsg(text,'user');
       history.push({role:'user',content:text});
       try {
-        const res = await fetch('/api/chat',{
+        const res = await fetch('/api/chat', {
           method:'POST',
           headers:{ 'Content-Type':'application/json' },
           body: JSON.stringify({ messages: history })
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          appendMsg(`Error ${res.status}`,'bot error');
+          return;
+        }
         const j = await res.json();
-        const reply = j.choices?.[0]?.message.content || 'No response';
+        const reply = j.choices[0].message.content;
         history.push({role:'assistant',content:reply});
         appendMsg(reply,'bot');
-        if ('speechSynthesis' in window){
-          const u = new SpeechSynthesisUtterance(reply);
-          u.lang = 'en-US';
-          speechSynthesis.speak(u);
-        }
-      } catch (e){
+        const u = new SpeechSynthesisUtterance(reply);
+        u.lang = 'en-US';
+        speechSynthesis.speak(u);
+      } catch (e) {
         console.error(e);
         appendMsg('[Network Error]','bot error');
       }
     }
 
     document.getElementById('send-btn').addEventListener('click', ()=>{
-      const inp = document.getElementById('text-input'),
-            t = inp.value.trim();
+      const inp = document.getElementById('text-input');
+      const t = inp.value.trim();
       if (!t) return;
       inp.value = '';
       sendChat(t);
     });
 
-    // 录音转写，测试是否成功deploy
     let recorder, chunks = [];
     document.getElementById('record-btn').addEventListener('click', async function(){
-      if (recorder?.state==='recording'){
+      if (recorder && recorder.state==='recording') {
         recorder.stop();
         this.classList.remove('recording');
       } else {
@@ -260,7 +249,10 @@
           form.append('file', blob, 'voice.webm');
           form.append('model','whisper-1');
           try {
-            const r = await fetch('/api/chat',{ method:'POST', body: form });
+            const r = await fetch('/api/chat', {
+              method:'POST',
+              body: form
+            });
             const j = await r.json();
             if (j.text) sendChat(j.text);
           } catch(err){
