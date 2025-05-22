@@ -131,8 +131,6 @@
     </div>
   </div>
 
-  <!-- 在 .gitignore 中的 config.js，只在本地开发时使用，Vercel 上通过环境变量注入 -->
-  <script src="config.js"></script>
   <script>
   document.addEventListener('DOMContentLoaded', ()=>{
 
@@ -167,29 +165,24 @@
     let currentVideo;
     function renderCard(){
       const p = genParams(), code = categorize(p), pet = PET_MAP[code];
-      // 更新参数
       document.getElementById('heart').textContent = p.heart;
       document.getElementById('touch').textContent = p.touch;
       document.getElementById('sound').textContent = p.sound;
-      // 更新名称、稀有度、描述
       document.getElementById('pet-name').textContent   = pet.name;
       document.getElementById('pet-rarity').textContent = `Rarity: ${getRarity(code)}`;
       document.getElementById('pet-desc').textContent   = pet.desc;
-      // 重置视频容器
       const ctr = document.getElementById('media-container');
       ctr.innerHTML = `<button id="hatch-btn">Hatch</button>`;
-      // 预加载视频
       currentVideo = document.createElement('video');
       currentVideo.src         = pet.src;
       currentVideo.loop        = true;
       currentVideo.playsInline = true;
       currentVideo.muted       = true;
       currentVideo.preload     = 'auto';
-      // 点击孵化
       ctr.querySelector('#hatch-btn').onclick = ()=>{
         ctr.innerHTML = '';
         ctr.appendChild(currentVideo);
-        currentVideo.play().catch(()=>{ /* 若被阻止，用户可手动点击 */ });
+        currentVideo.play().catch(()=>{});
       };
     }
     renderCard();
@@ -223,7 +216,6 @@
         const reply = j.choices[0].message.content;
         history.push({role:'assistant',content:reply});
         appendMsg(reply,'bot');
-        // TTS
         const u = new SpeechSynthesisUtterance(reply);
         u.lang = 'en-US';
         speechSynthesis.speak(u);
@@ -241,7 +233,6 @@
       sendChat(t);
     });
 
-    // 录音转写
     let recorder, chunks = [];
     document.getElementById('record-btn').addEventListener('click', async function(){
       if (recorder && recorder.state==='recording') {
