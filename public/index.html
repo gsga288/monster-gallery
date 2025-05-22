@@ -114,67 +114,67 @@ const getRarity=c=>['D','C','B','A','S'][[...c].filter(x=>x==='1').length];
 
 /* ---------- 16 只宠物数据保持不变 ---------- */
 const PET_MAP={
-"0000":{src:"media/calm_reserved_relaxed_cautious/b.mp4",name:"Needlecrest Sylph",desc:`Grade A · Rare
+"0000":{src:"media/calm_reserved_relaxed_cautious/b_mob.mp4",name:"Needlecrest Sylph",desc:`Grade A · Rare
 Appearance: A sleek, silvery-furred creature with a radiant crest of iridescent quills fanning down its back. Two curved, translucent horns arch gracefully from its head, and its large, violet-glowing eyes hold an ancient wisdom. Subtle bioluminescent markings trace along its limbs, pulsing softly like moonlight on water.
 Personality: Quietly observant and deeply empathetic, it drifts through shadows with graceful ease. Though naturally cautious, it forms steadfast bonds and offers gentle guidance through the faint rustle of its quills.
 Heart Rate: 78 bpm | Touch: 28 / 50 | Sound Level: 14 / 120 (Whisper-soft)`},
-"0001":{src:"media/calm_friendly_relaxed_loving/b.mp4",name:"Moonvale Fawn",desc:`Grade B · Rare
+"0001":{src:"media/calm_friendly_relaxed_loving/b_mob.mp4",name:"Moonvale Fawn",desc:`Grade B · Rare
 Appearance: A plump, fawn-like creature cloaked in soft, pearlescent white fur that seems to glow under moonlight. Its long, velvety ears tilt forward in perpetual curiosity, and its eyes form a gentle, contented smile even when closed. Along its back sprouts a row of delicate, translucent leaf-shaped spines that shimmer like dewdrops at dawn.
 Personality: Calm and affectionate, it nuzzles into your hand and emits a soft, lullaby-like hum. Its presence brings a soothing tranquility, as if the hush of a starlit glade followed you home.
 Heart Rate: 62 bpm | Touch: 22 / 50 | Sound Level: 9 / 120 (Lullaby-soft)`},
-"0010":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Prismarine Sylph",desc:`Grade A · Rare
+"0010":{src:"media/excited_reserved_relaxed_cautious/b_mob.mp4",name:"Prismarine Sylph",desc:`Grade A · Rare
 Appearance: A lithe, amphibious sprite with translucent, cerulean-blue skin that shimmers like moonlit water. Two crystalline horns sprout atop its head, facets catching every glint of light, and delicate, fin-like ears fan out behind its large, inky eyes. Its long, tapering tail trails behind in graceful undulations, dotted with bioluminescent speckles.
 Personality: Playfully curious and quick to bond, it flutters around with fluid, dance-like movements. Though shy at first, it becomes trusting and chatters aloud in gentle, tinkling calls when it feels at ease.
 Heart Rate: 88 bpm | Touch: 42 / 50 | Sound Level: 58 / 120 (Tinkling hum)`},
-"0011":{src:"media/calm_reserved_relaxed_loving/b.mp4",name:"Cottonplume Sprite",desc:`Grade B · Rare
+"0011":{src:"media/calm_reserved_relaxed_loving/b_mob.mp4",name:"Cottonplume Sprite",desc:`Grade B · Rare
 Appearance: A round, snow-white fluffball cloaked in downy feathers. Its tiny wings fold neatly at its sides, and a pair of soft, plume-like tufts sprout atop its head. Glossy onyx eyes peer out with innocent curiosity, and its beak is a delicate blush of pale pink.
 Personality: Serene and affectionate, it nestles into your palm with a gentle coo. Though shy at first, it soon relaxes into a warm, comforting presence, radiating a sense of calm.
 Heart Rate: 60 bpm | Touch: 30 / 50 | Sound Level: 15 / 120 (Quiet coo)`},
-"0100":{src:"media/calm_friendly_relaxed_cautious/b.mp4",name:"Glimmerwing Chick",desc:`Grade B · Rare
+"0100":{src:"media/calm_friendly_relaxed_cautious/b_mob.mp4",name:"Glimmerwing Chick",desc:`Grade B · Rare
 Appearance: A petite, round-bodied chick swathed in plush, snow-white down. From either side of its head sprout two translucent, feather-like ears that glow warmly with golden light, casting a soft halo around its inquisitive onyx eyes. Its tiny beak is a pale blush, and its stubby wings fold snugly against its sides.
 Personality: Gentle and affectionate, it emits the faintest, coo-like peeps and nestles into your palm for comfort. Though shy at first, it soon relaxes and greets you with a soft, luminous flutter.
 Heart Rate: 64 bpm | Touch: 20 / 50 | Sound Level: 18 / 120 (Barely audible)`},
-"0101":{src:"media/calm_reserved_relaxed_loving/b.mp4",name:"Dewplume Sprig",desc:`Grade B · Rare
+"0101":{src:"media/calm_reserved_relaxed_loving/b_mob.mp4",name:"Dewplume Sprig",desc:`Grade B · Rare
 Appearance: A petite, round-bodied hatchling covered in downy, pale-rose feathers that glisten with tiny dew droplets. From its crown sprout three short, translucent quills tipped in pastel green, each beaded with morning moisture. It perches delicately on a leaf, its glossy onyx eyes reflecting the world in miniature.
 Personality: Shy and inquisitive, it peeks out from beneath its quill-crown at every rustle of breeze. Though timid at first, it warms to gentle coaxing—nuzzling into your palm with soft, cautious peeps.
 Heart Rate: 72 bpm | Touch: 18 / 50 | Sound Level: 80 / 120 (Barely a whisper)`},
-"0110":{src:"media/excited_friendly_relaxed_cautious/b.mp4",name:"Lumina Jelly",desc:`Grade A · Rare
+"0110":{src:"media/excited_friendly_relaxed_cautious/b_mob.mp4",name:"Lumina Jelly",desc:`Grade A · Rare
 Appearance: A translucent, umbrella-shaped bell of pale aquamarine, within which fine, filamentous tendrils float like liquid starlight. Each strand glows softly with bioluminescent ripples, and the bell’s edge drips in delicate, wave-like fringes that drift with graceful ease.
 Personality: Serene and meditative, it drifts in gentle pulses of light—responding to your presence with soft, rhythmic glows. Its tranquil aura calms the mind, offering a steady, soothing companionship.
 Heart Rate: 82 bpm | Touch: 10 / 50 | Sound Level: 50 / 120 (Near silent)`},
-"0111":{src:"media/excited_friendly_relaxed_loving/b.mp4",name:"Little Ripple",desc:`Grade B · Rare Water Spirit Hatchling
+"0111":{src:"media/excited_friendly_relaxed_loving/b_mob.mp4",name:"Little Ripple",desc:`Grade B · Rare Water Spirit Hatchling
 The owner’s heart rate is a calm 82 bpm, voice as low as 35 dB, with a warm palm gently resting on its shell. It slides forth in the form of a crystal-clear blue droplet, tiny bubbles and halos drifting around its body. Gentle and soothing in temperament, it loves to cling to your palm, quietly keeping you company.
 Touch: 24 / 50`},
-"1000":{src:"media/excited_reserved_relaxed_loving/b.mp4",name:"Blue Crystal Sprite",desc:`Grade A
+"1000":{src:"media/excited_reserved_relaxed_loving/b_mob.mp4",name:"Blue Crystal Sprite",desc:`Grade A
 It has a translucent sky-blue body, like an adorable smiling slime, with soft, oversized ears atop its head and an aquamarine diamond clasped in its hands—truly a guardian spirit from the depths of the aurora. Clever and alert, with a hint of competitiveness, it quietly watches over you at all times, ever ready to fight for your sake.
 Heart Rate: 98 bpm | Touch: 35 | Voice: 48 dB`},
-"1001":{src:"media/excited_friendly_alert_loving/b.mp4",name:"Flarekoko",desc:`Grade A · Rare
+"1001":{src:"media/excited_friendly_alert_loving/b_mob.mp4",name:"Flarekoko",desc:`Grade A · Rare
 Appearance: A chubby little creature in fiery orange-red, patterned with flickering flames. Its large eyes glow like fireballs, and it rides atop tiny blazing wheels, steam rising around it.
 Personality: Hot-tempered and outgoing—at the slightest loud noise, it springs into the air.
 Special Trait: The more intense the interaction, the more exhilarated it becomes; the higher its heart rate climbs, the fiercer its tail blazes.
 Heart Rate: 100 bpm | Touch: 24 | Voice: 100 dB`},
-"1010":{src:"media/calm_friendly_alert_loving/b.mp4",name:"Star Whisper · Lunilith",desc:`Rarity: S (Unique)
+"1010":{src:"media/calm_friendly_alert_loving/b_mob.mp4",name:"Star Whisper · Lunilith",desc:`Rarity: S (Unique)
 Heart Rate: 62 bpm | Touch: 12 / 50 | Sound Level: 81 / 120
 It awakens in hushed stillness, draped in starlight, with the galaxy reflected in its eyes. It silently watches over the most tender corners of your heart.
 Gentle and synesthetic in nature—like the moon, it never clamors yet remains ever by your side.`},
-"1011":{src:"media/excited_reserved_relaxed_loving/b.mp4",name:"Shadow Glimmer",desc:`Grade A · Rare
+"1011":{src:"media/excited_reserved_relaxed_loving/b_mob.mp4",name:"Shadow Glimmer",desc:`Grade A · Rare
 Appearance: A pitch-black, semi-transparent sphere with faint starlight flowing within. Its ears resemble bat wings, gently flapping to keep it afloat.
 Personality: Quiet and sensitive, it loves to silently accompany you in the darkness, its soft whispers brimming with tenderness.
 Heart Rate: 81 bpm | Touch: 32 | Voice: 18 dB`},
-"1100":{src:"media/excited_reserved_relaxed_cautious/b.mp4",name:"Nebulight Nymph",desc:`Grade A · Rare
+"1100":{src:"media/excited_reserved_relaxed_cautious/b_mob.mp4",name:"Nebulight Nymph",desc:`Grade A · Rare
 Appearance: A slender, mouse-like sprite cloaked in a soft, mint-green glow speckled with star-like flecks. Its oversized, translucent ears shimmer with shifting aurora hues, and two delicate, iridescent wings sprout from its shoulders, framed by a faint halo of light. Its large, amethyst-flecked eyes reflect swirling galaxies within.
 Personality: Curious and gentle, it drifts in graceful arcs around you, ever observant. Though shy at first, it quickly warms to kind hands, greeting you with soft, musical trills.
 Heart Rate: 60 bpm | Touch: 38 / 50 | Sound Level: 90 / 120`},
-"1101":{src:"media/excited_reserved_alert_cautious/b.mp4",name:"Pyrodra the Blazing Beast",desc:`Rarity: A (Extremely Rare)
+"1101":{src:"media/excited_reserved_alert_cautious/b_mob.mp4",name:"Pyrodra the Blazing Beast",desc:`Rarity: A (Extremely Rare)
 Heart Rate: 105 bpm
 Touch: 45 / 50 (High-Frequency Interaction)
 Sound Level: 91 / 120 (Passionate Calls)
 Born from fervor, its flaming scales erupt like a tiny energy sphere!
 Impulsive and fiery by nature, always ready to dash into battle.`},
-"1110":{src:"media/excited_friendly_alert_cautious/b.mp4",name:"Bubbibi the Bouncebeast",desc:`Grade C (Common)
+"1110":{src:"media/excited_friendly_alert_cautious/b_mob.mp4",name:"Bubbibi the Bouncebeast",desc:`Grade C (Common)
 Heart Rate: 88 bpm | Touch: 20 / 50 (Affectionate strokes) | Sound Level: 81 / 100
 It bounces into view and immediately starts showering you with affection—soft and squishy like bubblegum, its laughter bubbling with a joyful gurgle. Clingy and vivacious by nature, it loves to scamper ahead while glancing back to see if you’re keeping up.`},
-"1111":{src:"media/calm_reserved_alert_loving/b.mp4",name:"Rose Pumpling",desc:`Appearance: A plump, pumpkin-shaped sprite in translucent rose-pink, its body gently ribbed like a miniature gourd. A slender brown stem with two soft green leaves sprouts atop its head, and its large, gem-bright eyes sparkle with curious warmth as it hovers.
+"1111":{src:"media/calm_reserved_alert_loving/b_mob.mp4",name:"Rose Pumpling",desc:`Appearance: A plump, pumpkin-shaped sprite in translucent rose-pink, its body gently ribbed like a miniature gourd. A slender brown stem with two soft green leaves sprouts atop its head, and its large, gem-bright eyes sparkle with curious warmth as it hovers.
 Personality: Sweet-natured and affectionate, it glows softly when touched and nuzzles into your palm, offering quiet companionship. Its gentle coos bring a soothing calm.
 Heart Rate: 65 bpm | Touch: 26 / 50 | Sound Level: 108 / 120`}
 };
