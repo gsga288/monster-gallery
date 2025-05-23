@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Pet Card & Voice Chat</title>
 
-<!-- ----------  basic CSS  ---------- -->
+<!-- -----------  basic CSS（保持原样） ----------- -->
 <style>
-/* ===== 背景与版式 ===== */
+/* 背景 */
 html,body{
   margin:0;padding:0;
   background:url("wonderland.png") no-repeat center/cover fixed;
@@ -15,12 +15,12 @@ html,body{
   display:flex;flex-direction:column;align-items:center;
   min-height:100vh;
 }
+/* 卡牌 */
 .card{
   width:80vw;max-width:500px;margin-top:20px;
   background:rgba(34,34,34,.9);border:2px solid #444;border-radius:8px;
   box-shadow:0 0 10px rgba(0,0,0,.6);overflow:hidden;display:flex;flex-direction:column;
 }
-/* ===== 头部、参数 ===== */
 .card-header{display:flex;justify-content:space-between;align-items:center;
   padding:8px 12px;background:#333;border-bottom:1px solid #444;}
 .pet-name{font-size:1.2em;font-weight:bold;}
@@ -30,14 +30,14 @@ html,body{
   display:flex;justify-content:space-around;font-size:.95em;}
 .card-params div{display:flex;align-items:center;gap:4px;}
 
-/* ===== 视频区域 ===== */
+/* 视频区域 16:9 */
 #media-container{position:relative;background:#000;width:100%;padding-bottom:56.25%;}
 #media-container video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 #hatch-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   z-index:10;padding:8px 16px;font-size:1em;border:none;border-radius:4px;
   background:rgba(255,255,255,.9);color:#111;cursor:pointer;}
 
-/* ===== 描述 & 聊天 ===== */
+/* 描述 & 聊天 */
 .pet-desc{padding:12px;background:#222;font-size:.95em;line-height:1.4;}
 #chat{width:80vw;max-width:500px;padding:10px;margin:20px 0;
   background:rgba(0,0,0,.6);border-radius:8px;display:flex;flex-direction:column;}
@@ -67,9 +67,7 @@ button{padding:6px 12px;font-size:1em;border:none;border-radius:4px;
     <div>✋ Touch:      <span id="touch">—</span></div>
     <div>🔊 Sound Lvl:  <span id="sound">—</span></div>
   </div>
-  <div id="media-container">
-    <button id="hatch-btn">Hatch</button>
-  </div>
+  <div id="media-container"><button id="hatch-btn">Hatch</button></div>
   <div class="pet-desc" id="pet-desc">—</div>
 </div>
 
@@ -78,33 +76,33 @@ button{padding:6px 12px;font-size:1em;border:none;border-radius:4px;
   <div id="messages"></div>
   <div id="controls">
     <button id="record-btn">🎤</button>
-    <input id="text-input" placeholder="Type message…">
+    <input  id="text-input" placeholder="Type message…">
     <button id="send-btn">Send</button>
   </div>
 </div>
 
-<!-- -------------------- 脚本 -------------------- -->
 <script>
-document.addEventListener('DOMContentLoaded',()=>{
+/* ========== 0. 移动端音频解锁（插入） ========== */
+function unlockAudio(){
+  const a=new Audio(); a.play().catch(()=>{});
+  document.removeEventListener('touchend',unlockAudio);
+  document.removeEventListener('click',unlockAudio);
+}
+document.addEventListener('touchend',unlockAudio,{once:true});
+document.addEventListener('click',unlockAudio,{once:true});
 
-/* ---------- 1. 安全检测：TTS 与 MediaRecorder ---------- */
+/* ---------- 1. 安全检测 ---------- */
 const SUPPORT_TTS = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 const SUPPORT_REC = 'MediaRecorder' in window;
-
 let voices=[];
-if (SUPPORT_TTS){
-  // 某些安卓需异步等待 voice 列表
-  speechSynthesis.onvoiceschanged = ()=> voices = speechSynthesis.getVoices();
-} else {
-  console.warn('[TTS] 当前浏览器不支持 speechSynthesis');
-}
+if(SUPPORT_TTS){ speechSynthesis.onvoiceschanged = ()=>voices = speechSynthesis.getVoices(); }
 
 /* ---------- 2. 公共小工具 ---------- */
 const rnd = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-const toBit = (v,t)=>v>t?'1':'0';
-const genParams  =()=>({heart:rnd(60,100),touch:rnd(0,50),sound:rnd(0,120)});
-const categorize = p => toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
-const rarity     = c => ['D','C','B','A','S'][[...c].filter(x=>x==='1').length];
+const toBit=(v,t)=>v>t?'1':'0';
+const genParams=()=>({heart:rnd(60,100),touch:rnd(0,50),sound:rnd(0,120)});
+const categorize=p=>toBit(p.heart,80)+toBit(p.touch,25)+toBit(p.sound,80)+'0';
+const rarity=c=>['D','C','B','A','S'][[...c].filter(x=>x==='1').length];
 
 /* ---------- 3. PET_MAP（原样保留） ---------- */
 const PET_MAP={
@@ -175,123 +173,95 @@ Heart Rate: 65 bpm | Touch: 26 / 50 | Sound Level: 108 / 120`}
  /* ... 您的 PET_MAP 原内容粘回 ... */ ;
 
 /* ---------- 4. DOM 缓存 ---------- */
-const $ = id=>document.getElementById(id);
-const elHeart=$('heart'), elTouch=$('touch'), elSound=$('sound');
-const elName=$('pet-name'), elRarity=$('pet-rarity'), elDesc=$('pet-desc');
-const box=$('media-container'), btn=$('hatch-btn');
-const msgBox=$('messages'), input=$('text-input'), send=$('send-btn'), mic=$('record-btn');
+const $=id=>document.getElementById(id);
+const elHeart=$('heart'),elTouch=$('touch'),elSound=$('sound');
+const elName=$('pet-name'),elRarity=$('pet-rarity'),elDesc=$('pet-desc');
+const box=$('media-container'),btn=$('hatch-btn');
+const msgBox=$('messages'),input=$('text-input'),send=$('send-btn'),mic=$('record-btn');
 
 /* ---------- 5. 渲染 & 孵化 ---------- */
-let video, timer=null, chatting=false, history=[];
-
-/* 检测浏览器是否能播放 MP4 */
-const canPlayMp4 = document.createElement('video').canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') !== '';
+let video,timer=null,chatting=false,history=[];
+const canMp4=document.createElement('video').canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"')!=='';
 
 function makeVideo(src){
   const v=document.createElement('video');
-  v.src = src;
-  v.loop = true;
-  v.muted = true;
-  v.autoplay = true;
-  v.playsInline = true;              // iOS
-  v.setAttribute('playsinline','');  // 安卓 WebView
-  v.setAttribute('autoplay','');
-  v.setAttribute('muted','');
-  v.preload = 'auto';
+  Object.assign(v,{src,loop:true,muted:true,autoplay:true,playsInline:true});
+  v.setAttribute('playsinline','');v.setAttribute('muted','');v.setAttribute('autoplay','');
   return v;
 }
 function renderCard(){
-  const p = genParams();
-  const code = categorize(p);
-  const pet  = PET_MAP[code];
-
-  // 若匹配不到或浏览器播放不了 MP4，则提示错误
-  if (!pet || !canPlayMp4){
-    elName.textContent = 'Unknown Pet';
-    elDesc.textContent = '⚠️ 当前浏览器无法播放视频，请使用支持 H.264 的浏览器或重新转码。';
-    return;
-  }
-
-  elHeart.textContent=p.heart; elTouch.textContent=p.touch; elSound.textContent=p.sound;
-  elName.textContent=pet.name; elRarity.textContent=`Rarity: ${rarity(code)}`; elDesc.textContent=pet.desc;
-
-  box.innerHTML='';                    // 重置
-  box.appendChild(btn);                // 放回 Hatch 按钮
-  video = makeVideo(pet.src);
+  const p=genParams(),code=categorize(p),pet=PET_MAP[code]||Object.values(PET_MAP)[0];
+  if(!pet||!canMp4){elName.textContent='Unknown Pet';elDesc.textContent='⚠️ 视频无法播放';return;}
+  elHeart.textContent=p.heart;elTouch.textContent=p.touch;elSound.textContent=p.sound;
+  elName.textContent=pet.name;elRarity.textContent=`Rarity: ${rarity(code)}`;elDesc.textContent=pet.desc;
+  box.innerHTML='';box.appendChild(btn);video=makeVideo(pet.src);
 }
 renderCard();
+btn.onclick=()=>{box.innerHTML='';box.appendChild(video);video.play().catch(()=>{});scheduleAuto(3000);};
 
-btn.onclick = ()=>{
-  if (!video) return;
-  box.innerHTML=''; box.appendChild(video);
-  video.play().catch(e=>console.warn('[Video] play() 被拒绝：',e));
-  scheduleAuto(3000);                  // 第一次 3 秒后自动说话
-};
+/* ---------- 6. 自动说话 & 聊天 ---------- */
+function line(txt,cls){const div=document.createElement('div');div.className='msg '+cls;div.textContent=txt;
+  msgBox.appendChild(div);msgBox.scrollTop=msgBox.scrollHeight;}
+function clearAuto(){if(timer)clearTimeout(timer);}
+function scheduleAuto(ms){clearAuto();timer=setTimeout(autoTalk,ms);}
 
-/* ---------- 6. 聊天与自动回复 ---------- */
-function line(txt,cls){ const d=document.createElement('div'); d.className='msg '+cls; d.textContent=txt;
-  msgBox.appendChild(d); msgBox.scrollTop=msgBox.scrollHeight; }
-function clearAuto(){ if(timer){clearTimeout(timer);} }
-function scheduleAuto(ms){ clearAuto(); timer=setTimeout(autoTalk,ms); }
+async function playVoice(text){          /* ⇩⇩  核心修改：优先云 TTS  ⇩⇩ */
+  try{
+    const {audioUrl}=await fetch('/api/tts',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})}).then(r=>r.json());
+    if(!audioUrl) throw new Error('no-url');
+    await new Audio(audioUrl).play();    // 云 MP3 成功播放
+  }catch(e){
+    console.warn('[LOVO TTS fail]',e);
+    if(SUPPORT_TTS){
+      const u=new SpeechSynthesisUtterance(text);
+      u.voice = voices.find(v=>/kid|child|girl/.test(v.name.toLowerCase())) || null;
+      u.pitch = 1.6; u.rate = 1.15;
+      speechSynthesis.speak(u);
+    }
+  }
+}
 
 async function talk(){
   chatting=true;
   try{
-    const r=await fetch('/api/chat',{
-      method:'POST',
+    const r=await fetch('/api/chat',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:history})
-    });
+      body:JSON.stringify({messages:history})});
     const j=await r.json();
     const reply=j.choices?.[0]?.message?.content||'[No reply]';
-    history.push({role:'assistant',content:reply});
-    line(reply,'bot');
-
-    // 仅当 TTS 支持时朗读
-    if (SUPPORT_TTS){
-      const u=new SpeechSynthesisUtterance(reply);
-      u.voice=voices.find(v=>/kid|child|girl/.test(v.name.toLowerCase()))||null;
-      u.pitch=1.8; u.rate=1.2;
-      speechSynthesis.speak(u);
-    }
-  }catch(e){
-    console.error(e);
-    line('[Net Err]','bot error');
-  }
-  chatting=false; scheduleAuto(20000);
+    history.push({role:'assistant',content:reply}); line(reply,'bot');
+    await playVoice(reply);
+  }catch(e){console.error(e);line('[Net Err]','bot error');}
+  chatting=false;scheduleAuto(20000);
 }
-function sendMsg(t){ clearAuto(); line(t,'user'); history.push({role:'user',content:t}); talk(); }
-function autoTalk(){ if(chatting){scheduleAuto(20000);return;} history.push({role:'user',content:''}); line('…','bot'); talk(); }
+function sendMsg(t){clearAuto();line(t,'user');history.push({role:'user',content:t});talk();}
+function autoTalk(){if(chatting){scheduleAuto(20000);return;}history.push({role:'user',content:''});line('…','bot');talk();}
 
-/* ---------- 7. 输入 / 发送 ---------- */
-send.onclick = ()=>{ const t=input.value.trim(); if(t){input.value=''; sendMsg(t);} };
-input.onkeypress = e=>{ if(e.key==='Enter'){e.preventDefault(); send.click();} };
+/* ---------- 7. 输入发送 ---------- */
+send.onclick=()=>{const t=input.value.trim();if(t){input.value='';sendMsg(t);} };
+input.onkeypress=e=>{if(e.key==='Enter'){e.preventDefault();send.click();} };
 
-/* ---------- 8. 录音（若浏览器支持） ---------- */
+/* ---------- 8. 录音转写（原逻辑保留） ---------- */
 let recorder,chunks=[];
-mic.onclick = async function(){
-  if (!SUPPORT_REC){
-    line('[Record] 当前浏览器不支持录音','bot error'); return;
-  }
-  if(recorder?.state==='recording'){ recorder.stop(); this.classList.remove('recording'); return; }
+mic.onclick=async function(){
+  if(!SUPPORT_REC){line('[Record] Browser no MediaRecorder','bot error');return;}
+  if(recorder?.state==='recording'){recorder.stop();this.classList.remove('recording');return;}
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    recorder=new MediaRecorder(stream); chunks=[];
+    recorder=new MediaRecorder(stream);chunks=[];
     recorder.ondataavailable=e=>chunks.push(e.data);
     recorder.onstop=async()=>{
       const form=new FormData();
       form.append('file',new Blob(chunks,{type:'audio/webm'}),'voice.webm');
       form.append('model','whisper-1');
-      const r=await fetch('/api/chat',{method:'POST',body:form});
-      const j=await r.json();
-      if(j.text) sendMsg(j.text);
+      const r=await fetch('/api/chat',{method:'POST',body:form}).then(r=>r.json());
+      if(r.text) sendMsg(r.text);
     };
     recorder.start(); this.classList.add('recording');
-  }catch(e){ console.warn(e); line('[Mic denied]','bot error'); }
+  }catch(e){console.warn(e);line('[Mic denied]','bot error');}
 };
-
-}); /* DOMContentLoaded */
 </script>
 </body>
 </html>
-

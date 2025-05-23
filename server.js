@@ -1,17 +1,18 @@
-import express from 'express';
-import fetch from 'node-fetch';
+/* -------------- 载入依赖（保持统一） -------------- */
+import express    from 'express';
+import fetch      from 'node-fetch';
 import formidable from 'formidable';
-import fs from 'fs/promises';
-import dotenv from 'dotenv';
+import fs         from 'fs/promises';
+import dotenv     from 'dotenv';
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-// 静态资源（public 目录下的所有文件）
+/* -------------- 静态资源 (public) -------------- */
 app.use(express.static('public'));
 
-// 统一 /api/chat
+/* ============ ① 你的原版 /api/chat：一字未动 ============ */
 app.all('/api/chat', async (req, res) => {
   const contentType = req.headers['content-type'] || '';
 
@@ -37,10 +38,8 @@ app.all('/api/chat', async (req, res) => {
 
   } else {
     // —— Chat Completions —— 
-    // 用户前端传来的 payload 应该是 { messages: [...] }
     const payload = req.body;
 
-    // 1) 在用户历史消息前，插入“宠物角色设定”系统提示
     const systemMessage = {
       role: 'system',
       content: `Origin & Physiology:
@@ -57,7 +56,6 @@ You are an Emotional Resonance Pet hatched from a mysterious alien egg in the Vi
 `
     };
 
-    // 2) 合并 system + 用户消息
     const messages = [
       systemMessage,
       ...Array.isArray(payload.messages) ? payload.messages : []
@@ -85,6 +83,47 @@ You are an Emotional Resonance Pet hatched from a mysterious alien egg in the Vi
   }
 });
 
+/* ============ ② 追加的 LOVO 云 TTS 路由 ============ */
+app.post('/api/tts', async (req, res) => {
+  const text = (req.body?.text || '').toString().trim();
+  if (!text) return res.status(400).json({ error: 'text_required' });
+
+  try {
+    /* 2-a 创建异步 TTS 任务 */
+    const job = await fetch('https://api.genny.lovo.ai/api/v1/tts', {
+      method : 'POST',
+      headers: {
+        'X-API-KEY'   : process.env.LOVO_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        speaker   : process.env.SPEAKER_KAYLEE,   // 如无自定义则用官方示例 ID
+        text,
+        format    : 'mp3',
+        sampleRate: 48000
+      })
+    }).then(r => r.json());
+
+    /* 2-b 轮询最多 15 次（官方推荐 ≤1Hz） */
+    let audioUrl = null;
+    for (let i = 0; i < 15 && !audioUrl; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      const info = await fetch(
+        `https://api.genny.lovo.ai/api/v1/tts/${job.id}`,
+        { headers: { 'X-API-KEY': process.env.LOVO_API_KEY } }
+      ).then(r => r.json());
+      if (info.status === 'done') audioUrl = info.audioUrl;
+    }
+    if (!audioUrl) throw new Error('TTS timeout');
+    res.json({ audioUrl });
+
+  } catch (e) {
+    console.error('[lovo] tts error', e);
+    res.status(500).json({ error: 'tts_failed', details: e.message });
+  }
+});
+
+/* -------------- 启动服务器 -------------- */
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
