@@ -234,10 +234,10 @@ async function talk(){
     history.push({role:'assistant',content:reply}); line(reply,'bot');
     await playVoice(reply);
   }catch(e){console.error(e);line('[Net Err]','bot error');}
-  chatting=false;scheduleAuto(5000);
+  chatting=false;scheduleAuto(3500);
 }
 function sendMsg(t){clearAuto();line(t,'user');history.push({role:'user',content:t});talk();}
-function autoTalk(){if(chatting){scheduleAuto(5000);return;}history.push({role:'user',content:''});line('…','bot');talk();}
+function autoTalk(){if(chatting){scheduleAuto(3500);return;}history.push({role:'user',content:''});line('…','bot');talk();}
 
 /* ---------- 7. 输入发送 ---------- */
 send.onclick=()=>{const t=input.value.trim();if(t){input.value='';sendMsg(t);} };
